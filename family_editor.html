@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="hy">
+<head>
+<meta charset="utf-8">
+<title>Family Tree Editor</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #303435;
+    --panel: #2a2d2e;
+    --ink: #F6F6F6;
+    --olive: #C2CC3E;
+    --teal: #75C6B8;
+    --coral: #CC6658;
+    --border: #4a4e4f;
+    --muted: #9aa0a2;
+    --danger: #CC6658;
+    --success: #C2CC3E;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Oswald","Noto Sans Armenian","Sylfaen",system-ui,sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  header {
+    padding: 12px 22px;
+    background: rgba(48,52,53,0.92);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 10;
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    backdrop-filter: blur(6px);
+  }
+  header h1 {
+    font-size: 18px; margin: 0; color: var(--olive);
+    font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+  }
+  header button, header label.btn {
+    padding: 7px 14px; border: 1px solid var(--border); border-radius: 4px;
+    background: rgba(255,255,255,0.05); color: var(--ink); cursor: pointer;
+    font-family: inherit; font-size: 12px;
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+  header button:hover, header label.btn:hover {
+    background: rgba(194,204,62,0.18); border-color: var(--olive);
+  }
+  header button.primary {
+    background: var(--olive); color: var(--bg); border-color: var(--olive); font-weight: 600;
+  }
+  header button.primary:hover { background: #d6e04a; }
+  header input[type="file"] { display: none; }
+  #status { font-size: 12px; color: var(--muted); margin-left: auto; letter-spacing: 1px; }
+  .stale { color: var(--coral); font-weight: 600; }
+
+  .tree { padding: 24px; }
+  ul.tree-list { list-style: none; padding-left: 0; margin: 0; }
+  ul.tree-list ul {
+    list-style: none; padding-left: 28px; margin: 6px 0 6px 14px;
+    border-left: 1px solid var(--border);
+  }
+  li.node { position: relative; margin: 6px 0; padding-left: 14px; }
+  li.node::before {
+    content: ""; position: absolute; left: -1px; top: 18px;
+    width: 14px; height: 1px; background: var(--border);
+  }
+  .card {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 5px 12px; border-radius: 3px;
+    background: var(--bg);
+    border: 1px solid var(--ink);
+  }
+  .card.male   { border-color: var(--teal); }
+  .card.female { border-color: var(--coral); }
+  .toggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--bg); border: 1px solid var(--border);
+    font-size: 12px; font-weight: bold; color: var(--olive);
+    cursor: pointer; user-select: none;
+  }
+  .toggle.empty { visibility: hidden; }
+  .name {
+    font-weight: 600; cursor: pointer; color: var(--ink);
+    letter-spacing: 1px; text-transform: uppercase; font-size: 13px;
+  }
+  .card.male .name   { color: var(--teal); }
+  .card.female .name { color: var(--coral); }
+  .name:hover { color: var(--olive); }
+  .id-tag { font-size: 10px; color: #666; letter-spacing: 1px; }
+  .actions { display: inline-flex; gap: 4px; margin-left: 6px; }
+  .actions button {
+    border: 1px solid var(--border); background: rgba(255,255,255,0.05);
+    border-radius: 3px; padding: 2px 8px; cursor: pointer; font-size: 10px;
+    font-family: inherit; color: var(--muted);
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+  .actions button:hover { background: rgba(194,204,62,0.15); color: var(--olive); border-color: var(--olive); }
+  .actions button.add { color: var(--olive); }
+  .actions button.add:hover { background: var(--olive); color: var(--bg); }
+  .actions button.del { color: var(--coral); }
+  .actions button.del:hover { background: var(--coral); color: var(--bg); border-color: var(--coral); }
+  li.node.collapsed > ul { display: none; }
+
+  /* Modal */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+    display: none; align-items: center; justify-content: center; z-index: 100;
+    backdrop-filter: blur(4px);
+  }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+    padding: 28px; width: 360px; max-width: 90vw;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    color: var(--ink);
+  }
+  .modal h2 {
+    margin: 0 0 16px; color: var(--olive); font-family: "Oswald",sans-serif;
+    font-size: 20px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+  }
+  .modal label {
+    display: block; font-size: 10px; color: var(--teal);
+    margin-top: 14px; letter-spacing: 2px; text-transform: uppercase;
+  }
+  .modal input, .modal select {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border);
+    border-radius: 4px; font-family: inherit; font-size: 14px; margin-top: 6px;
+    background: var(--panel); color: var(--ink);
+    letter-spacing: 0.5px;
+  }
+  .modal select option {
+    background: var(--panel); color: var(--ink);
+  }
+  .modal input:focus, .modal select:focus { outline: none; border-color: var(--olive); }
+  .modal .ctx { font-size: 12px; color: var(--muted); margin-top: 4px; font-style: italic; }
+  .modal .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 22px; }
+  .modal button {
+    padding: 8px 18px; border: 1px solid var(--border); border-radius: 4px;
+    background: rgba(255,255,255,0.05); color: var(--ink); cursor: pointer;
+    font-family: inherit; font-size: 12px; letter-spacing: 1px; text-transform: uppercase;
+  }
+  .modal button:hover { background: rgba(194,204,62,0.15); border-color: var(--olive); }
+  .modal button.primary { background: var(--olive); color: var(--bg); border-color: var(--olive); font-weight: 600; }
+  .modal button.primary:hover { background: #d6e04a; }
+  .modal button.danger  { background: var(--coral); color: var(--bg); border-color: var(--coral); font-weight: 600; }
+  .modal button.danger:hover { background: #e07a6e; }
+  .modal p { color: var(--ink); }
+
+  #empty {
+    padding: 80px 22px; text-align: center; color: var(--muted);
+    font-size: 16px; letter-spacing: 1px;
+  }
+  #empty code {
+    background: rgba(194,204,62,0.12); color: var(--olive);
+    padding: 2px 8px; border-radius: 3px; font-family: "Oswald", monospace;
+  }
+  #empty b { color: var(--olive); }
+</style>
+</head>
+<body>
+<header>
+  <h1>◆ Family Tree Editor</h1>
+  <label class="btn">
+    Load JSON
+    <input id="loadFile" type="file" accept=".json,application/json">
+  </label>
+  <button id="saveBtn" class="primary">Save</button>
+  <button id="downloadBtn">Download JSON</button>
+  <button id="addRootBtn">+ Add root person</button>
+  <button id="expandAll">Expand all</button>
+  <button id="collapseAll">Collapse all</button>
+  <span id="status">No data loaded</span>
+</header>
+
+<div id="empty">
+  Load <code>family_tree.json</code> to begin, or click <b>+ Add root person</b>.
+</div>
+<div class="tree" id="treeContainer" style="display:none;">
+  <ul id="rootList" class="tree-list"></ul>
+</div>
+
+<!-- Edit/Add modal -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h2 id="modalTitle">Edit person</h2>
+    <div class="ctx" id="modalContext"></div>
+    <label>Name
+      <input id="fName" type="text" autocomplete="off">
+    </label>
+    <label>Gender
+      <select id="fGender">
+        <option value="">—</option>
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+      </select>
+    </label>
+    <div class="row">
+      <button id="modalCancel">Cancel</button>
+      <button id="modalSave" class="primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirm modal -->
+<div class="modal-bg" id="delModal">
+  <div class="modal">
+    <h2>Delete person?</h2>
+    <div class="ctx" id="delContext"></div>
+    <p style="font-size:13px;color:#555;">This will also delete <span id="delCount">0</span> descendants. This cannot be undone (until you re-load the JSON).</p>
+    <div class="row">
+      <button id="delCancel">Cancel</button>
+      <button id="delConfirm" class="danger">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script id="embedded-data" type="application/json">{"id": "START", "name": "Ապել", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": null, "father_name": null, "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "E7CD7", "name": "Ավագ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "START", "father_name": "Ապել", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "RSFBN", "name": "Մարո", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "E7CD7", "father_name": "Ավագ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}, {"id": "W4KUX", "name": "Հակոբ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "START", "father_name": "Ապել", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "U6VWL", "name": "Ղազար", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "START", "father_name": "Ապել", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "ZNFU3", "name": "Բաբա", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "U6VWL", "father_name": "Ղազար", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "PCKQ1", "name": "Արտյուշ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "ZNFU3", "father_name": "Բաբա", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "IP0VW", "name": "Բորիս", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "PCKQ1", "father_name": "Արտյուշ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "QL5U3", "name": "Արմինե", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "IP0VW", "father_name": "Բորիս", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "Q33GK", "name": "Գարիկ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "IP0VW", "father_name": "Բորիս", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "N8MHD", "name": "Էդգար", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "IP0VW", "father_name": "Բորիս", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}, {"id": "N726B", "name": "Մաքսիմ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "PCKQ1", "father_name": "Արտյուշ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "ZFJUT", "name": "Անի", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "N726B", "father_name": "Մաքսիմ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "EHVAL", "name": "Զորաբ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "N726B", "father_name": "Մաքսիմ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "E5H1P", "name": "Նանո", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "N726B", "father_name": "Մաքսիմ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}, {"id": "SX4AR", "name": "Սարգիս", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "PCKQ1", "father_name": "Արտյուշ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "FEIUR", "name": "Արմեն", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "SX4AR", "father_name": "Սարգիս", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "M7M80", "name": "Կարեն", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "SX4AR", "father_name": "Սարգիս", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "TRP5M", "name": "Հասմիկ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "SX4AR", "father_name": "Սարգիս", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}, {"id": "TUM5M", "name": "Վրեժ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "PCKQ1", "father_name": "Արտյուշ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "SAKZV", "name": "Արտակ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "TUM5M", "father_name": "Վրեժ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "Z3J5N", "name": "Արտյոմ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "TUM5M", "father_name": "Վրեժ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}]}, {"id": "LQ61K", "name": "Սարգիս", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "ZNFU3", "father_name": "Բաբա", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}, {"id": "E9V2C", "name": "Հովակիմ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "U6VWL", "father_name": "Ղազար", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "VIS9E", "name": "Արփինե", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "E9V2C", "father_name": "Հովակիմ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "PIAKU", "name": "Մինաս", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "E9V2C", "father_name": "Հովակիմ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "RWN49", "name": "Արփիկ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "PIAKU", "father_name": "Մինաս", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "K9DKL", "name": "Դարիկ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "PIAKU", "father_name": "Մինաս", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "T0ELZ", "name": "Թաթուլ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "PIAKU", "father_name": "Մինաս", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "DD0LQ", "name": "Արթուր", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "T0ELZ", "father_name": "Թաթուլ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "MRET3", "name": "Թաթուլ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "DD0LQ", "father_name": "Արթուր", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "EC3QA", "name": "Մարիամ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "DD0LQ", "father_name": "Արթուր", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}, {"id": "F1XDO", "name": "Լուսինե", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "T0ELZ", "father_name": "Թաթուլ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "ADCQQ", "name": "Սիրուշ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "T0ELZ", "father_name": "Թաթուլ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}, {"id": "RUAQ1", "name": "Լաուրա", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "PIAKU", "father_name": "Մինաս", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "HPBMJ", "name": "Ծաղիկ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "PIAKU", "father_name": "Մինաս", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "ZFS7U", "name": "Մանիկ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "PIAKU", "father_name": "Մինաս", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "XN9ZX", "name": "Միսակ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "PIAKU", "father_name": "Մինաս", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "U07RK", "name": "Արմեն", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "XN9ZX", "father_name": "Միսակ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "PVK3T", "name": "Արսեն", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "U07RK", "father_name": "Արմեն", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "OP1NY", "name": "Կարինե", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "U07RK", "father_name": "Արմեն", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}, {"id": "ENFD4", "name": "Ստեփան", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "XN9ZX", "father_name": "Միսակ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "FN8BW", "name": "Միսակ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "ENFD4", "father_name": "Ստեփան", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "W2NT9", "name": "Ստեփան", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "FN8BW", "father_name": "Միսակ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}]}]}, {"id": "WO8QR", "name": "Ֆրունզ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "PIAKU", "father_name": "Մինաս", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "LOIJ7", "name": "Արսեն", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "WO8QR", "father_name": "Ֆրունզ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "YQL3G", "name": "Գոռ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "LOIJ7", "father_name": "Արսեն", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "DX7JU", "name": "Էմմա", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "LOIJ7", "father_name": "Արսեն", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}, {"id": "ZIF20", "name": "Արտակ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "WO8QR", "father_name": "Ֆրունզ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "Z1ZCE", "name": "Գևորգ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "ZIF20", "father_name": "Արտակ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "RCC0W", "name": "Մարիամ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "ZIF20", "father_name": "Արտակ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "PCJTE", "name": "Սարգիս", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "ZIF20", "father_name": "Արտակ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}, {"id": "A4A0Y", "name": "Գևորգ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "WO8QR", "father_name": "Ֆրունզ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "QMKUD", "name": "Արթուր", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "A4A0Y", "father_name": "Գևորգ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "WNXWQ", "name": "Ֆրունզ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "A4A0Y", "father_name": "Գևորգ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}]}]}, {"id": "ST6TY", "name": "Միսակ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "E9V2C", "father_name": "Հովակիմ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}]}, {"id": "CTUZ5", "name": "Մաթեվոս", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "START", "father_name": "Ապել", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "P1ZDN", "name": "Եղիշ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "CTUZ5", "father_name": "Մաթեվոս", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "A83MG", "name": "Աղվան", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "P1ZDN", "father_name": "Եղիշ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "PLAUU", "name": "Գարեգին", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "P1ZDN", "father_name": "Եղիշ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "MPC2U", "name": "Գագո", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "PLAUU", "father_name": "Գարեգին", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "VD8AJ", "name": "Մարո", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "PLAUU", "father_name": "Գարեգին", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "SG2ZJ", "name": "Մելան", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "PLAUU", "father_name": "Գարեգին", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "VN4TY", "name": "Մելինե", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "PLAUU", "father_name": "Գարեգին", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "L7HS5", "name": "Սամվել", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "PLAUU", "father_name": "Գարեգին", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}, {"id": "TKF7G", "name": "Գեղեցիկ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "P1ZDN", "father_name": "Եղիշ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "Y0DJE", "name": "Վարդագյուլ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "P1ZDN", "father_name": "Եղիշ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}, {"id": "ZYLIS", "name": "Խաչատուր", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "CTUZ5", "father_name": "Մաթեվոս", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "AVDGK", "name": "Արտաշ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "ZYLIS", "father_name": "Խաչատուր", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "R81N8", "name": "Սասնիկ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "AVDGK", "father_name": "Արտաշ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "Q0ITG", "name": "Լիանա", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "R81N8", "father_name": "Սասնիկ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "Z044Z", "name": "Մարտիկ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "R81N8", "father_name": "Սասնիկ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "O2VQG", "name": "Նաիրի", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "R81N8", "father_name": "Սասնիկ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "QXFI5", "name": "Ջանիկ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "R81N8", "father_name": "Սասնիկ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}, {"id": "AJU34", "name": "Սերգո", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "AVDGK", "father_name": "Արտաշ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "EZA1R", "name": "Աննա", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "AJU34", "father_name": "Սերգո", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "NZOAE", "name": "Սարգիս", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "AJU34", "father_name": "Սերգո", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}]}, {"id": "M21O7", "name": "Զարմո", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "ZYLIS", "father_name": "Խաչատուր", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "K4XK9", "name": "Հայկանդուխտ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "ZYLIS", "father_name": "Խաչատուր", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "ZFCR0", "name": "Հայկանուշ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "ZYLIS", "father_name": "Խաչատուր", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "JJKGF", "name": "Հայկարամ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "ZYLIS", "father_name": "Խաչատուր", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "AIBIT", "name": "Անահիտ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "JJKGF", "father_name": "Հայկարամ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "HS5N2", "name": "Արեգնազ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "JJKGF", "father_name": "Հայկարամ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "CAK5F", "name": "Մայիս", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "JJKGF", "father_name": "Հայկարամ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "T7Y2X", "name": "Արամ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "CAK5F", "father_name": "Մայիս", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "WLKD0", "name": "Հայկ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "CAK5F", "father_name": "Մայիս", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}]}, {"id": "R9HNN", "name": "Հայրապետ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "ZYLIS", "father_name": "Խաչատուր", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "D8PKT", "name": "Գայանե", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "R9HNN", "father_name": "Հայրապետ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "H0S2S", "name": "Միսակ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "R9HNN", "father_name": "Հայրապետ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "H6I23", "name": "Նորիկ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "R9HNN", "father_name": "Հայրապետ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "V4MD1", "name": "Լուսինե", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "H6I23", "father_name": "Նորիկ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "ZASLJ", "name": "Հայրապետ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "H6I23", "father_name": "Նորիկ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "I5K8E", "name": "Սերինե", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "H6I23", "father_name": "Նորիկ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}]}, {"id": "MFGS9", "name": "Նահապետ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "ZYLIS", "father_name": "Խաչատուր", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "T7FND", "name": "Աննա", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "MFGS9", "father_name": "Նահապետ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "CHFZM", "name": "Խաչիկ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "MFGS9", "father_name": "Նահապետ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "TXL57", "name": "Անդո", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "CHFZM", "father_name": "Խաչիկ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "F7CQP", "name": "Արփինե", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "CHFZM", "father_name": "Խաչիկ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "YOR28", "name": "Նահապետ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "CHFZM", "father_name": "Խաչիկ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}, {"id": "R22B8", "name": "Սուսան", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "MFGS9", "father_name": "Նահապետ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}, {"id": "WHU8X", "name": "Շավարշ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "ZYLIS", "father_name": "Խաչատուր", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "RQMUP", "name": "Արթուր", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "WHU8X", "father_name": "Շավարշ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "C3N7G", "name": "Սվետա", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "WHU8X", "father_name": "Շավարշ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "J30R0", "name": "Վալենտին", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "WHU8X", "father_name": "Շավարշ", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}]}, {"id": "OZ83N", "name": "Կզո", "nickname": null, "surname_now": null, "surname_birth": null, "gender": null, "deceased": null, "father_id": "CTUZ5", "father_name": "Մաթեվոս", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "ZJWPC", "name": "Հայրո", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "CTUZ5", "father_name": "Մաթեվոս", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": [{"id": "OW198", "name": "Կինար", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Female", "deceased": null, "father_id": "ZJWPC", "father_name": "Հայրո", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}, {"id": "ZTH6A", "name": "Սերգեյ", "nickname": null, "surname_now": null, "surname_birth": null, "gender": "Male", "deceased": null, "father_id": "ZJWPC", "father_name": "Հայրո", "mother_id": null, "mother_name": null, "birth_year": null, "birth_month": null, "birth_day": null, "death_year": null, "birth_place": null, "death_place": null, "partner_id": null, "partner_name": null, "profession": null, "bio": null, "children": []}]}]}]}</script>
+<script>
+// ===== STATE =====
+let TREE = null;     // root node (object) or null
+let DIRTY = false;
+const PEOPLE = {};   // id -> node (live references into TREE)
+
+function rebuildIndex() {
+  for (const k in PEOPLE) delete PEOPLE[k];
+  function walk(n, parent) {
+    PEOPLE[n.id] = n;
+    n._parent = parent;
+    (n.children || []).forEach(c => walk(c, n));
+  }
+  if (TREE) walk(TREE, null);
+}
+
+function newId() {
+  // 5-char base36, ensure unique
+  let id;
+  do {
+    id = Math.random().toString(36).substring(2, 7).toUpperCase();
+  } while (PEOPLE[id]);
+  return id;
+}
+
+function setDirty(d) {
+  DIRTY = d;
+  updateStatus();
+}
+
+function updateStatus() {
+  const s = document.getElementById('status');
+  if (!TREE) { s.textContent = 'No data loaded'; s.className = ''; return; }
+  const n = Object.keys(PEOPLE).length;
+  s.textContent = `${n} people · ${DIRTY ? 'unsaved changes' : 'saved'}`;
+  s.className = DIRTY ? 'stale' : '';
+}
+
+// ===== RENDER =====
+function render() {
+  const container = document.getElementById('treeContainer');
+  const empty = document.getElementById('empty');
+  if (!TREE) {
+    container.style.display = 'none';
+    empty.style.display = 'block';
+    return;
+  }
+  container.style.display = '';
+  empty.style.display = 'none';
+  const ul = document.getElementById('rootList');
+  ul.innerHTML = renderNode(TREE);
+  updateStatus();
+}
+
+function genderClass(g) {
+  if (!g) return '';
+  const s = String(g).toLowerCase();
+  if (s.startsWith('m')) return 'male';
+  if (s.startsWith('f') || s.startsWith('w')) return 'female';
+  return '';
+}
+
+function renderNode(node) {
+  const kids = node.children || [];
+  const tog = kids.length
+    ? `<span class="toggle" data-toggle>−</span>`
+    : `<span class="toggle empty">·</span>`;
+  let html = `<li class="node" data-id="${esc(node.id)}">`;
+  html += `<span class="card ${genderClass(node.gender)}">`;
+  html += tog;
+  html += `<span class="name" data-edit>${esc(node.name)}</span>`;
+  html += ` <span class="id-tag">#${esc(node.id)}</span>`;
+  html += `<span class="actions">`;
+  html += `<button class="add" data-add title="Add child">+ child</button>`;
+  html += `<button data-edit2 title="Edit">edit</button>`;
+  html += `<button class="del" data-del title="Delete">×</button>`;
+  html += `</span>`;
+  html += `</span>`;
+  if (kids.length) {
+    html += '<ul>';
+    for (const k of kids) html += renderNode(k);
+    html += '</ul>';
+  }
+  html += '</li>';
+  return html;
+}
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ===== INTERACTIONS =====
+document.addEventListener('click', e => {
+  const tog = e.target.closest('[data-toggle]');
+  if (tog) {
+    e.stopPropagation();
+    tog.closest('li.node').classList.toggle('collapsed');
+    tog.textContent = tog.closest('li.node').classList.contains('collapsed') ? '+' : '−';
+    return;
+  }
+  const add = e.target.closest('[data-add]');
+  if (add) {
+    const id = add.closest('li.node').dataset.id;
+    openModal({ mode: 'add', parentId: id });
+    return;
+  }
+  const editBtn = e.target.closest('[data-edit], [data-edit2]');
+  if (editBtn) {
+    const id = editBtn.closest('li.node').dataset.id;
+    openModal({ mode: 'edit', id });
+    return;
+  }
+  const del = e.target.closest('[data-del]');
+  if (del) {
+    const id = del.closest('li.node').dataset.id;
+    openDelete(id);
+    return;
+  }
+});
+
+document.getElementById('expandAll').onclick = () => {
+  document.querySelectorAll('li.node.collapsed').forEach(li => {
+    li.classList.remove('collapsed');
+    const t = li.querySelector(':scope > .card > [data-toggle]');
+    if (t) t.textContent = '−';
+  });
+};
+document.getElementById('collapseAll').onclick = () => {
+  document.querySelectorAll('li.node').forEach(li => {
+    if (li.querySelector(':scope > ul')) {
+      li.classList.add('collapsed');
+      const t = li.querySelector(':scope > .card > [data-toggle]');
+      if (t) t.textContent = '+';
+    }
+  });
+};
+
+// ===== MODAL: ADD / EDIT =====
+let modalState = null;
+
+function openModal(state) {
+  modalState = state;
+  const title = document.getElementById('modalTitle');
+  const ctx = document.getElementById('modalContext');
+  const nameInput = document.getElementById('fName');
+  const genderInput = document.getElementById('fGender');
+
+  if (state.mode === 'edit') {
+    const p = PEOPLE[state.id];
+    title.textContent = 'Edit person';
+    ctx.textContent = `Editing #${p.id}`;
+    nameInput.value = p.name || '';
+    genderInput.value = p.gender || '';
+  } else if (state.mode === 'add') {
+    title.textContent = 'Add child';
+    const parent = state.parentId ? PEOPLE[state.parentId] : null;
+    ctx.textContent = parent ? `New child of ${parent.name}` : 'New root person';
+    nameInput.value = '';
+    genderInput.value = '';
+  } else if (state.mode === 'addRoot') {
+    title.textContent = 'Add root person';
+    ctx.textContent = TREE ? `Will be added as sibling of ${TREE.name}` : 'First person in the tree';
+    nameInput.value = '';
+    genderInput.value = '';
+  }
+  document.getElementById('modal').classList.add('open');
+  nameInput.focus();
+}
+
+document.getElementById('modalCancel').onclick = closeModal;
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target.id === 'modal') closeModal();
+});
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  modalState = null;
+}
+
+document.getElementById('modalSave').onclick = () => {
+  if (!modalState) return;
+  const name = document.getElementById('fName').value.trim();
+  const gender = document.getElementById('fGender').value || null;
+  if (!name) { alert('Name is required'); return; }
+
+  if (modalState.mode === 'edit') {
+    const p = PEOPLE[modalState.id];
+    p.name = name;
+    p.gender = gender;
+  } else if (modalState.mode === 'add') {
+    const parent = PEOPLE[modalState.parentId];
+    const node = {
+      id: newId(), name, gender,
+      father_id: parent.id,
+      children: [],
+    };
+    parent.children = parent.children || [];
+    parent.children.push(node);
+  } else if (modalState.mode === 'addRoot') {
+    const node = {
+      id: newId(), name, gender,
+      father_id: null,
+      children: [],
+    };
+    if (!TREE) {
+      TREE = node;
+    } else {
+      // Wrap into a forest: convert TREE into [TREE, node] — but our app expects single root.
+      // For simplicity, prepend as a NEW root by making it the new TREE and grafting old TREE as child? No.
+      // Instead, support multi-root by keeping TREE as array if needed.
+      if (!Array.isArray(TREE)) TREE = [TREE];
+      TREE.push(node);
+    }
+  }
+  rebuildIndex();
+  render();
+  setDirty(true);
+  closeModal();
+};
+
+// Enter to submit
+document.getElementById('fName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('modalSave').click();
+});
+
+// ===== DELETE =====
+let delTargetId = null;
+
+function openDelete(id) {
+  delTargetId = id;
+  const p = PEOPLE[id];
+  const descs = countDescendants(p) - 1;
+  document.getElementById('delContext').textContent = `${p.name} (#${p.id})`;
+  document.getElementById('delCount').textContent = descs;
+  document.getElementById('delModal').classList.add('open');
+}
+function countDescendants(n) {
+  let c = 1;
+  (n.children||[]).forEach(k => c += countDescendants(k));
+  return c;
+}
+document.getElementById('delCancel').onclick = () => document.getElementById('delModal').classList.remove('open');
+document.getElementById('delModal').addEventListener('click', e => {
+  if (e.target.id === 'delModal') e.target.classList.remove('open');
+});
+document.getElementById('delConfirm').onclick = () => {
+  const p = PEOPLE[delTargetId];
+  if (!p) return;
+  const parent = p._parent;
+  if (parent) {
+    parent.children = (parent.children||[]).filter(c => c.id !== p.id);
+  } else {
+    // Deleting a root
+    if (Array.isArray(TREE)) {
+      TREE = TREE.filter(r => r.id !== p.id);
+      if (TREE.length === 0) TREE = null;
+      else if (TREE.length === 1) TREE = TREE[0];
+    } else {
+      TREE = null;
+    }
+  }
+  rebuildIndex();
+  render();
+  setDirty(true);
+  document.getElementById('delModal').classList.remove('open');
+};
+
+// ===== ADD ROOT =====
+document.getElementById('addRootBtn').onclick = () => {
+  openModal({ mode: TREE ? 'addRoot' : 'add', parentId: null });
+};
+
+// ===== LOAD / SAVE =====
+document.getElementById('loadFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      TREE = data;
+      // strip any non-data internal fields if present
+      function clean(n) {
+        delete n._parent;
+        (n.children||[]).forEach(clean);
+      }
+      if (Array.isArray(TREE)) TREE.forEach(clean); else clean(TREE);
+      rebuildIndex();
+      render();
+      setDirty(false);
+    } catch (err) {
+      alert('Failed to parse JSON: ' + err.message);
+    }
+  };
+  reader.readAsText(file, 'utf-8');
+  e.target.value = '';
+});
+
+// Helpers shared by Save and Download
+function stripTree(n) {
+  const out = {};
+  for (const k in n) if (k !== '_parent' && k !== 'children') out[k] = n[k];
+  out.children = (n.children||[]).map(stripTree);
+  return out;
+}
+function currentPayload() {
+  return Array.isArray(TREE) ? TREE.map(stripTree) : stripTree(TREE);
+}
+
+// Remember the file handle once the user picks family_tree.json — subsequent saves write in place.
+// Persist the handle in IndexedDB so it survives page reloads.
+let fileHandle = null;
+
+const HANDLE_DB = 'family-editor';
+const HANDLE_STORE = 'handles';
+const HANDLE_KEY = 'family_tree_json';
+
+function idb(action) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(HANDLE_DB, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(HANDLE_STORE);
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const db = req.result;
+      const tx = db.transaction(HANDLE_STORE, action.mode);
+      const store = tx.objectStore(HANDLE_STORE);
+      const r = action.run(store);
+      tx.oncomplete = () => resolve(r.result);
+      tx.onerror = () => reject(tx.error);
+    };
+  });
+}
+const saveHandle = h => idb({ mode:'readwrite', run: s => s.put(h, HANDLE_KEY) });
+const loadHandle = () => idb({ mode:'readonly', run: s => s.get(HANDLE_KEY) });
+
+async function ensurePermission(handle) {
+  const opts = { mode: 'readwrite' };
+  if ((await handle.queryPermission(opts)) === 'granted') return true;
+  return (await handle.requestPermission(opts)) === 'granted';
+}
+
+async function writeToHandle() {
+  if (!fileHandle) return false;
+  if (!(await ensurePermission(fileHandle))) {
+    alert('Write permission denied.');
+    return false;
+  }
+  const writable = await fileHandle.createWritable();
+  await writable.write(JSON.stringify(currentPayload(), null, 2));
+  await writable.close();
+  setDirty(false);
+  return true;
+}
+
+async function pickExistingFile() {
+  if (!('showOpenFilePicker' in window)) return false;
+  try {
+    const [h] = await window.showOpenFilePicker({
+      types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }],
+      multiple: false,
+    });
+    fileHandle = h;
+    await saveHandle(h);
+    return true;
+  } catch (e) {
+    if (e.name !== 'AbortError') console.error(e);
+    return false;
+  }
+}
+
+// Restore handle on load
+(async () => {
+  try {
+    const h = await loadHandle();
+    if (h) fileHandle = h;
+  } catch (e) { /* ignore */ }
+})();
+
+// Save: write back into the live family_tree.json file (in place via File System Access API).
+// First click asks you to pick the existing family_tree.json; subsequent clicks save silently.
+document.getElementById('saveBtn').onclick = async () => {
+  if (!TREE) { alert('Nothing to save.'); return; }
+  if (!('showOpenFilePicker' in window)) {
+    alert('Your browser does not support in-place save.\nUse Chrome or Edge, or click "Download JSON" instead.');
+    return;
+  }
+  try {
+    if (!fileHandle) {
+      const picked = await pickExistingFile();
+      if (!picked) return;
+    }
+    const ok = await writeToHandle();
+    if (ok) {
+      const btn = document.getElementById('saveBtn');
+      const orig = btn.textContent;
+      btn.textContent = '✓ Saved';
+      setTimeout(() => btn.textContent = orig, 1200);
+    }
+  } catch (e) {
+    // If the handle is stale (file moved/deleted), prompt to pick again
+    if (e.name === 'NotFoundError' || e.name === 'InvalidStateError') {
+      fileHandle = null;
+      alert('Linked file no longer accessible. Pick family_tree.json again.');
+      const picked = await pickExistingFile();
+      if (picked) await writeToHandle();
+    } else {
+      alert('Save failed: ' + e.message);
+    }
+  }
+};
+
+// Download: always triggers a browser download of family_tree.json
+document.getElementById('downloadBtn').onclick = () => {
+  if (!TREE) { alert('Nothing to download.'); return; }
+  const blob = new Blob([JSON.stringify(currentPayload(), null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'family_tree.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  setDirty(false);
+};
+
+// Auto-load: prefer embedded JSON, fall back to fetch (works when served via http)
+(async function autoLoad() {
+  const embedded = document.getElementById('embedded-data');
+  if (embedded) {
+    const txt = embedded.textContent.trim();
+    if (txt && txt !== '__DATA__') {
+      try {
+        TREE = JSON.parse(txt);
+        rebuildIndex();
+        render();
+        setDirty(false);
+        return;
+      } catch (e) { /* fall through */ }
+    }
+  }
+  try {
+    const res = await fetch('family_tree.json', { cache: 'no-cache' });
+    if (!res.ok) return;
+    TREE = await res.json();
+    rebuildIndex();
+    render();
+    setDirty(false);
+  } catch (e) {
+    // Likely opened via file:// without embedded data — use Load JSON button
+  }
+})();
+
+// Warn on unload if dirty
+window.addEventListener('beforeunload', e => {
+  if (DIRTY) { e.preventDefault(); e.returnValue = ''; }
+});
+</script>
+</body>
+</html>

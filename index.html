@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="hy">
+<head>
+<meta charset="utf-8">
+<title>Armenian Family Tree</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #303435;
+    --panel: #2a2d2e;
+    --border: #4a4e4f;
+    --ink: #F6F6F6;
+    --olive: #C2CC3E;
+    --teal: #75C6B8;
+    --coral: #CC6658;
+    --muted: #9aa0a2;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100%; }
+  body {
+    font-family: "Oswald", "Noto Sans Armenian", "Sylfaen", sans-serif;
+    background: radial-gradient(circle at 50% 0%, #3a3f40 0%, var(--bg) 70%);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 60px 20px 60px;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 56px; }
+  header h1 {
+    font-size: 52px; margin: 0 0 8px; color: var(--olive);
+    font-weight: 600; letter-spacing: 4px; text-transform: uppercase;
+    font-family: "Oswald", sans-serif;
+  }
+  header .subtitle {
+    font-size: 18px; color: var(--muted);
+    font-style: italic; margin-top: 0; letter-spacing: 2px;
+  }
+  header .divider { width: 60px; height: 2px; background: var(--olive); margin: 18px auto; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 22px;
+  }
+  a.card {
+    display: block; text-decoration: none; color: var(--ink);
+    background: var(--panel);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 24px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    position: relative; overflow: hidden;
+  }
+  a.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(194, 204, 62, 0.18);
+    border-color: var(--olive);
+  }
+  a.card .icon {
+    font-size: 36px; margin-bottom: 14px; display: block; color: var(--olive);
+  }
+  a.card h2 {
+    font-family: "Oswald", sans-serif; font-size: 22px;
+    margin: 0 0 8px; color: var(--olive);
+    letter-spacing: 2px; text-transform: uppercase; font-weight: 600;
+  }
+  a.card p {
+    margin: 0; font-size: 14px; color: var(--ink); line-height: 1.6;
+    font-family: "Oswald", sans-serif; font-weight: 300;
+  }
+  a.card .tag {
+    display: inline-block; margin-top: 14px; padding: 3px 12px;
+    background: rgba(194, 204, 62, 0.12);
+    border: 1px solid var(--border); border-radius: 3px;
+    font-size: 10px; color: var(--olive);
+    letter-spacing: 2px; text-transform: uppercase;
+    font-family: "Oswald", sans-serif;
+  }
+  a.card.editor { border-color: var(--coral); }
+  a.card.editor .icon { color: var(--coral); }
+  a.card.editor h2 { color: var(--coral); }
+  a.card.editor .tag { background: rgba(204, 102, 88, 0.12); color: var(--coral); border-color: var(--coral); }
+  a.card.editor:hover { border-color: var(--coral); box-shadow: 0 8px 24px rgba(204, 102, 88, 0.2); }
+
+  footer {
+    text-align: center;
+    margin-top: 60px;
+    color: var(--muted);
+    font-size: 13px;
+    font-family: "Oswald", sans-serif;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>◆ Family Tree ◆</h1>
+    <div class="divider"></div>
+    <p class="subtitle">Choose a view</p>
+  </header>
+
+  <div class="grid">
+
+    <a class="card" href="family_tree.html">
+      <span class="icon">≡</span>
+      <h2>Indented List</h2>
+      <p>Classic expandable tree with names, dates, and full details. Best for browsing the entire family hierarchy.</p>
+      <span class="tag">Compact</span>
+    </a>
+
+    <a class="card" href="family_chart.html">
+      <span class="icon">⌬</span>
+      <h2>Genealogical Chart</h2>
+      <p>Top-down genealogical chart with horizontal generations. Pan and zoom to explore. Switch orientation with one click.</p>
+      <span class="tag">Classic</span>
+    </a>
+
+    <a class="card" href="family_freepik.html">
+      <span class="icon">❀</span>
+      <h2>Illustrated Tree</h2>
+      <p>Stylized fractal tree illustration with curving branches and decorative leaves on a dark background. Artistic view.</p>
+      <span class="tag">Artistic</span>
+    </a>
+
+    <a class="card" href="family_freepik3.html">
+      <span class="icon">▼</span>
+      <h2>Compact Illustrated</h2>
+      <p>Same illustrated style with tight spacing — all names visible without overlap. Best balance of beauty and readability.</p>
+      <span class="tag">Recommended</span>
+    </a>
+
+    <a class="card editor" href="family_editor.html">
+      <span class="icon">✎</span>
+      <h2>Editor</h2>
+      <p>Add, edit, and delete people. Add children with name and gender. Save changes back to JSON, then run rebuild_all.py to update all views.</p>
+      <span class="tag">Edit</span>
+    </a>
+
+  </div>
+
+  <footer>Armenian Family Tree · 108 members · descended from Ապել</footer>
+</div>
+</body>
+</html>
