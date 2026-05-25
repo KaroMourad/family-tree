@@ -239,6 +239,9 @@ li.node.match > .card .name { color: var(--olive); }
   background: rgba(255, 255, 255, 0.06); color: var(--ink);
   font-size: 13px; letter-spacing: 0.5px;
 }
+.modal select option {
+  background: var(--panel); color: var(--ink);
+}
 .modal textarea { min-height: 60px; resize: vertical; }
 .modal .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .modal .footer { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
