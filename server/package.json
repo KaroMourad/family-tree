@@ -11,7 +11,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "import-json": "tsx scripts/import-json.ts",
-    "create-admin": "tsx scripts/create-admin.ts"
+    "create-superadmin": "tsx scripts/create-superadmin.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
