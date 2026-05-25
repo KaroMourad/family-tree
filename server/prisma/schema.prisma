@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         String   @default("user")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  trees        Tree[]
+}
+
+model Tree {
+  id        String   @id @default(cuid())
+  name      String
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  people    Person[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+}
+
+model Person {
+  treeId        String
+  tree          Tree     @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  id            String
+  name          String
+  nickname      String?
+  surnameNow    String?
+  surnameBirth  String?
+  gender        String?
+  deceased      String?
+  fatherId      String?
+  fatherName    String?
+  motherId      String?
+  motherName    String?
+  birthYear     Int?
+  birthMonth    Int?
+  birthDay      Int?
+  deathYear     Int?
+  birthPlace    String?
+  deathPlace    String?
+  partnerId     String?
+  partnerName   String?
+  profession    String?
+  bio           String?
+  sortOrder     Int      @default(0)
+
+  parent        Person?  @relation("ParentChildren", fields: [parentTreeId, parentId], references: [treeId, id], onDelete: SetNull)
+  parentId      String?
+  parentTreeId  String?
+  children      Person[] @relation("ParentChildren")
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@id([treeId, id])
+  @@index([parentId])
+  @@index([treeId])
+}
