@@ -14,6 +14,7 @@ server/dist/
 server/prisma/migrations/dev.db*
 pre-multitree-backup.sql
 .claude/
+.superpowers/
 client/tsconfig.tsbuildinfo
 dev.err
 dev.log
