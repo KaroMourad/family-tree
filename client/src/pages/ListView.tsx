@@ -3,6 +3,9 @@ import { Link, useParams } from "react-router-dom";
 import { allRoots, flattenTree, useTree } from "../hooks/useTree";
 import { DetailPanel } from "../components/DetailPanel";
 import type { TreeNode } from "../types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import "../styles/views.css";
 
 function genderClass(g?: string | null) {
@@ -87,13 +90,13 @@ export function ListView() {
     return set;
   }, [q, byId]);
 
-  if (loading) return <div style={{ padding: 40 }}>Loading…</div>;
-  if (error) return <div style={{ padding: 40, color: "var(--coral)" }}>Error: {error}</div>;
+  if (loading) return <div className="p-10">Loading…</div>;
+  if (error) return <div className="p-10 text-destructive">Error: {error}</div>;
   if (Array.isArray(tree) && tree.length === 0) {
     return (
-      <div style={{ padding: 40 }}>
+      <div className="p-10">
         <p>This tree is empty.</p>
-        <p><Link to={`/tree/${treeId}/editor`}>Open the editor to add people.</Link></p>
+        <p><Link to={`/tree/${treeId}/editor`} className="text-primary hover:underline">Open the editor to add people.</Link></p>
       </div>
     );
   }
@@ -102,24 +105,34 @@ export function ListView() {
   const peopleCount = Object.keys(byId).length;
 
   return (
-    <div className="view-shell">
-      <header className="view-header">
-        <h1>◆ Family Tree</h1>
-        <Link className="btn" to={`/tree/${treeId}`}>← Views</Link>
-        <input
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-10 flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur">
+        <h1 className="m-0 text-lg font-semibold text-primary uppercase tracking-[0.15em]">
+          ◆ Family Tree
+        </h1>
+        <Button asChild variant="outline" size="sm" className="uppercase tracking-widest">
+          <Link to={`/tree/${treeId}`}>← Views</Link>
+        </Button>
+        <Input
           type="search"
           placeholder="Search by name or ID..."
           value={q}
           onChange={(e) => setQ(e.target.value)}
+          className="w-56"
         />
-        <button onClick={() => setCollapsedAll(-1)}>Expand all</button>
-        <button onClick={() => setCollapsedAll(1)}>Collapse all</button>
-        <span className="stats">
+        <Button variant="outline" size="sm" onClick={() => setCollapsedAll(-1)} className="uppercase tracking-widest">
+          Expand all
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => setCollapsedAll(1)} className="uppercase tracking-widest">
+          Collapse all
+        </Button>
+        <span className="ml-auto text-xs text-muted-foreground tracking-widest">
           {peopleCount} people · {roots.length} root line{roots.length === 1 ? "" : "s"}
         </span>
+        <ThemeToggle />
       </header>
 
-      <div className="tree-list-wrap">
+      <div className="p-6 overflow-auto">
         <ul className="tree-list">
           {roots.map((r) => (
             <ListNode key={r.id} node={r} collapsedAll={collapsedAll} match={matches} onSelect={setSelectedId} />
