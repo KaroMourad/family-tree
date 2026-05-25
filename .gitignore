@@ -13,3 +13,7 @@ client/dist/
 server/dist/
 server/prisma/migrations/dev.db*
 pre-multitree-backup.sql
+.claude/
+client/tsconfig.tsbuildinfo
+dev.err
+dev.log

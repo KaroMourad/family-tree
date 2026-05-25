@@ -14,51 +14,13 @@ export function TreeChooser() {
   const peopleCount = Object.keys(flattenTree(nestedTree)).length;
   const rootName = allRoots(nestedTree)[0]?.name ?? "";
 
-  const [name, setName] = useState(tree.name);
-  const [renaming, setRenaming] = useState(false);
-  const [draftName, setDraftName] = useState(tree.name);
-  const [renameBusy, setRenameBusy] = useState(false);
-  const [renameErr, setRenameErr] = useState<string | null>(null);
-
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [typedName, setTypedName] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  function startRename() {
-    setDraftName(name);
-    setRenameErr(null);
-    setRenaming(true);
-  }
-
-  async function saveRename() {
-    const next = draftName.trim();
-    if (!next) {
-      setRenameErr("Name is required");
-      return;
-    }
-    if (next === name) {
-      setRenaming(false);
-      return;
-    }
-    setRenameBusy(true);
-    setRenameErr(null);
-    try {
-      const updated = await api<{ name: string }>(`/trees/${tree.id}`, {
-        method: "PUT",
-        body: JSON.stringify({ name: next }),
-      });
-      setName(updated.name);
-      setRenaming(false);
-    } catch (e) {
-      setRenameErr(String((e as Error).message));
-    } finally {
-      setRenameBusy(false);
-    }
-  }
-
   async function deleteThisTree() {
-    if (typedName !== name) {
+    if (typedName !== tree.name) {
       setErr("Type the tree name exactly to confirm.");
       return;
     }
@@ -88,40 +50,7 @@ export function TreeChooser() {
 
       <div className="container">
         <header>
-          {renaming ? (
-            <div style={{ display: "flex", gap: 8, justifyContent: "center", alignItems: "center", flexWrap: "wrap" }}>
-              <span>◆</span>
-              <input
-                autoFocus
-                value={draftName}
-                onChange={(e) => setDraftName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") saveRename();
-                  if (e.key === "Escape") setRenaming(false);
-                }}
-                disabled={renameBusy}
-                style={{ fontSize: "1.5em", padding: "4px 8px", minWidth: 240 }}
-              />
-              <button className="primary" onClick={saveRename} disabled={renameBusy}>
-                {renameBusy ? "Saving…" : "Save"}
-              </button>
-              <button onClick={() => setRenaming(false)} disabled={renameBusy}>Cancel</button>
-              <span>◆</span>
-            </div>
-          ) : (
-            <h1>
-              ◆ {name}{" "}
-              <button
-                onClick={startRename}
-                title="Rename tree"
-                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.6em", verticalAlign: "middle" }}
-              >
-                ✎
-              </button>{" "}
-              ◆
-            </h1>
-          )}
-          {renameErr && <p style={{ color: "var(--coral)", fontSize: 12 }}>{renameErr}</p>}
+          <h1>◆ {tree.name} ◆</h1>
           <div className="divider" />
           <p className="subtitle">Choose a view</p>
         </header>
@@ -167,10 +96,10 @@ export function TreeChooser() {
         {confirmDelete && (
           <div className="modal-backdrop" onClick={() => setConfirmDelete(false)}>
             <div className="modal" onClick={(e) => e.stopPropagation()}>
-              <h3>Delete "{name}"?</h3>
+              <h3>Delete "{tree.name}"?</h3>
               <p>This deletes the tree and all {peopleCount} people in it. There is no undo.</p>
               <p>Type the tree name to confirm:</p>
-              <input value={typedName} onChange={(e) => setTypedName(e.target.value)} placeholder={name} />
+              <input value={typedName} onChange={(e) => setTypedName(e.target.value)} placeholder={tree.name} />
               {err && <div style={{ color: "var(--coral)", fontSize: 12, marginTop: 8 }}>{err}</div>}
               <div className="footer">
                 <button onClick={() => setConfirmDelete(false)} disabled={busy}>Cancel</button>
