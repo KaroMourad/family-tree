@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import type { Person, TreeNode } from "../types";
+import { useTreeContext } from "../tree/TreeContext";
+import type { Person, Tree, TreeNode } from "../types";
 import "../styles/views.css";
 
 function genderClass(g?: string | null) {
@@ -165,11 +166,49 @@ type EditorState = { mode: "create" | "edit"; person: FormState; id?: string } |
 export function Editor() {
   const { treeId } = useParams();
   const { user, logout } = useAuth();
+  const contextTree = useTreeContext();
+  const [treeName, setTreeName] = useState(contextTree.name);
+  const [renaming, setRenaming] = useState(false);
+  const [renameDraft, setRenameDraft] = useState(contextTree.name);
+  const [renameBusy, setRenameBusy] = useState(false);
+  const [renameError, setRenameError] = useState<string | null>(null);
   const [people, setPeople] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editorState, setEditorState] = useState<EditorState>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  async function saveTreeName() {
+    const next = renameDraft.trim();
+    if (!next) {
+      setRenameError("Name cannot be empty");
+      return;
+    }
+    if (next === treeName) {
+      setRenaming(false);
+      return;
+    }
+    setRenameBusy(true);
+    setRenameError(null);
+    try {
+      const updated = await api<Tree>(`/trees/${treeId}`, {
+        method: "PUT",
+        body: JSON.stringify({ name: next }),
+      });
+      setTreeName(updated.name);
+      setRenaming(false);
+    } catch (e) {
+      setRenameError(String((e as Error).message));
+    } finally {
+      setRenameBusy(false);
+    }
+  }
+
+  function cancelRename() {
+    setRenameDraft(treeName);
+    setRenameError(null);
+    setRenaming(false);
+  }
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -287,7 +326,40 @@ export function Editor() {
   return (
     <div className="view-shell">
       <header className="view-header">
-        <h1>◆ Editor</h1>
+        {renaming ? (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <input
+              autoFocus
+              value={renameDraft}
+              onChange={(e) => setRenameDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") saveTreeName();
+                else if (e.key === "Escape") cancelRename();
+              }}
+              disabled={renameBusy}
+              style={{ fontSize: 18, padding: "2px 6px" }}
+            />
+            <button onClick={saveTreeName} disabled={renameBusy}>
+              {renameBusy ? "Saving…" : "Save"}
+            </button>
+            <button onClick={cancelRename} disabled={renameBusy}>Cancel</button>
+            {renameError && (
+              <span style={{ color: "var(--coral)", fontSize: 12 }}>{renameError}</span>
+            )}
+          </span>
+        ) : (
+          <h1
+            onClick={() => {
+              setRenameDraft(treeName);
+              setRenameError(null);
+              setRenaming(true);
+            }}
+            title="Click to rename"
+            style={{ cursor: "pointer" }}
+          >
+            ◆ {treeName} ✎
+          </h1>
+        )}
         <Link className="btn" to={`/tree/${treeId}`}>← Views</Link>
         <button onClick={() => setEditorState({ mode: "create", person: emptyForm(null) })}>+ Root person</button>
         <span className="stats">
