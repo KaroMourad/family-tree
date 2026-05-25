@@ -59,8 +59,7 @@ export function TreeList() {
 
         {trees && trees.length === 0 && !creating && (
           <p style={{ textAlign: "center", marginTop: 24 }}>
-            You don't have any trees yet.{" "}
-            <button onClick={() => setCreating(true)}>Create your first tree</button>
+            You don't have any trees yet — create one below.
           </p>
         )}
 
