@@ -4,6 +4,9 @@ import * as d3 from "d3";
 import { firstRoot, flattenTree, useTree } from "../hooks/useTree";
 import { DetailPanel } from "../components/DetailPanel";
 import type { TreeNode } from "../types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import "../styles/views.css";
 
 const NODE_W = 110;
@@ -167,31 +170,42 @@ export function ChartView() {
     );
   }
 
-  if (loading) return <div style={{ padding: 40 }}>Loading…</div>;
-  if (error) return <div style={{ padding: 40, color: "var(--coral)" }}>Error: {error}</div>;
+  if (loading) return <div className="p-10">Loading…</div>;
+  if (error) return <div className="p-10 text-destructive">Error: {error}</div>;
   if (Array.isArray(tree) && tree.length === 0) {
     return (
-      <div style={{ padding: 40 }}>
+      <div className="p-10">
         <p>This tree is empty.</p>
-        <p><Link to={`/tree/${treeId}/editor`}>Open the editor to add people.</Link></p>
+        <p><Link to={`/tree/${treeId}/editor`} className="text-primary hover:underline">Open the editor to add people.</Link></p>
       </div>
     );
   }
-  if (!root) return <div style={{ padding: 40 }}>No data.</div>;
+  if (!root) return <div className="p-10">No data.</div>;
 
   const selected = selectedId ? byId[selectedId] ?? null : null;
 
   return (
-    <div className="view-shell chart" style={{ height: "100vh", overflow: "hidden" }}>
-      <header className="view-header">
-        <h1>◆ Family Tree</h1>
-        <Link className="btn" to={`/tree/${treeId}`}>← Views</Link>
-        <input type="search" placeholder="Search name or ID..." value={q} onChange={(e) => setQ(e.target.value)} />
-        <button onClick={fit}>Fit</button>
-        <button onClick={() => zoomRef.current && d3.select(svgRef.current!).transition().call(zoomRef.current.scaleBy as any, 1.3)}>+</button>
-        <button onClick={() => zoomRef.current && d3.select(svgRef.current!).transition().call(zoomRef.current.scaleBy as any, 1 / 1.3)}>−</button>
-        <button onClick={() => setOrientation((o) => (o === "vertical" ? "horizontal" : "vertical"))}>Rotate</button>
-        <span className="stats">{Object.keys(byId).length} people</span>
+    <div className="chart min-h-screen h-screen overflow-hidden bg-background text-foreground">
+      <header className="sticky top-0 z-10 flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur">
+        <h1 className="m-0 text-lg font-semibold text-primary uppercase tracking-[0.15em]">
+          ◆ Genealogical Chart
+        </h1>
+        <Button asChild variant="outline" size="sm" className="uppercase tracking-widest">
+          <Link to={`/tree/${treeId}`}>← Views</Link>
+        </Button>
+        <Input
+          type="search"
+          placeholder="Search name or ID..."
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="w-56"
+        />
+        <Button variant="outline" size="sm" onClick={fit} className="uppercase tracking-widest">Fit</Button>
+        <Button variant="outline" size="sm" onClick={() => zoomRef.current && d3.select(svgRef.current!).transition().call(zoomRef.current.scaleBy as any, 1.3)}>+</Button>
+        <Button variant="outline" size="sm" onClick={() => zoomRef.current && d3.select(svgRef.current!).transition().call(zoomRef.current.scaleBy as any, 1 / 1.3)}>−</Button>
+        <Button variant="outline" size="sm" onClick={() => setOrientation((o) => (o === "vertical" ? "horizontal" : "vertical"))} className="uppercase tracking-widest">Rotate</Button>
+        <span className="ml-auto text-xs text-muted-foreground tracking-widest">{Object.keys(byId).length} people</span>
+        <ThemeToggle />
       </header>
       <div className="svg-wrap">
         <svg ref={svgRef} />
