@@ -55,8 +55,9 @@ model Person {
   bio           String?
   sortOrder     Int      @default(0)
 
-  parent        Person?  @relation("ParentChildren", fields: [parentId], references: [id], onDelete: SetNull)
+  parent        Person?  @relation("ParentChildren", fields: [parentTreeId, parentId], references: [treeId, id], onDelete: SetNull)
   parentId      String?
+  parentTreeId  String?
   children      Person[] @relation("ParentChildren")
 
   createdAt     DateTime @default(now())
