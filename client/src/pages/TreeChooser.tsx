@@ -1,20 +1,9 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { api } from "../api/client";
+import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useTree, allRoots, flattenTree } from "../hooks/useTree";
 import { useTreeContext } from "../tree/TreeContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 type ViewCard = {
@@ -30,30 +19,8 @@ export function TreeChooser() {
   const tree = useTreeContext();
   const { user, logout } = useAuth();
   const { tree: nestedTree } = useTree(tree.id);
-  const navigate = useNavigate();
   const peopleCount = Object.keys(flattenTree(nestedTree)).length;
   const rootName = allRoots(nestedTree)[0]?.name ?? "";
-
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [typedName, setTypedName] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  async function deleteThisTree() {
-    if (typedName !== tree.name) {
-      setErr("Type the tree name exactly to confirm.");
-      return;
-    }
-    setBusy(true);
-    setErr(null);
-    try {
-      await api(`/trees/${tree.id}`, { method: "DELETE" });
-      navigate("/");
-    } catch (e) {
-      setErr(String((e as Error).message));
-      setBusy(false);
-    }
-  }
 
   const views: ViewCard[] = [
     { to: `/tree/${tree.id}/list`, icon: "≡", title: "Indented List", desc: "Classic expandable tree with names, dates, and full details.", tag: "Compact" },
@@ -109,44 +76,8 @@ export function TreeChooser() {
 
         <footer className="text-center mt-14 text-sm text-muted-foreground uppercase tracking-widest">
           {peopleCount} members{rootName ? ` · descended from ${rootName}` : ""}
-          {" · "}
-          <button onClick={() => setConfirmDelete(true)} className="text-destructive hover:underline">
-            Delete tree
-          </button>
         </footer>
       </div>
-
-      <Dialog open={confirmDelete} onOpenChange={(open) => { if (!open) { setConfirmDelete(false); setErr(null); setTypedName(""); } }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="uppercase tracking-widest text-primary">
-              Delete "{tree.name}"?
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 text-sm">
-            <p>This deletes the tree and all {peopleCount} people in it. There is no undo.</p>
-            <p>Type the tree name to confirm:</p>
-            <Input
-              value={typedName}
-              onChange={(e) => setTypedName(e.target.value)}
-              placeholder={tree.name}
-            />
-            {err && (
-              <Alert variant="destructive">
-                <AlertDescription>{err}</AlertDescription>
-              </Alert>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDelete(false)} disabled={busy}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={deleteThisTree} disabled={busy}>
-              {busy ? "Deleting…" : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

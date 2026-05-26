@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { useTreeContext } from "../tree/TreeContext";
@@ -223,6 +223,7 @@ type EditorState = { mode: "create" | "edit"; person: FormState; id?: string } |
 
 export function Editor() {
   const { treeId } = useParams();
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const contextTree = useTreeContext();
   const [treeName, setTreeName] = useState(contextTree.name);
@@ -238,6 +239,26 @@ export function Editor() {
   const [deleteTarget, setDeleteTarget] = useState<Person | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteTreeOpen, setDeleteTreeOpen] = useState(false);
+  const [deleteTreeName, setDeleteTreeName] = useState("");
+  const [deleteTreeBusy, setDeleteTreeBusy] = useState(false);
+  const [deleteTreeError, setDeleteTreeError] = useState<string | null>(null);
+
+  async function deleteThisTree() {
+    if (deleteTreeName !== treeName) {
+      setDeleteTreeError("Type the tree name exactly to confirm.");
+      return;
+    }
+    setDeleteTreeBusy(true);
+    setDeleteTreeError(null);
+    try {
+      await api(`/trees/${treeId}`, { method: "DELETE" });
+      navigate("/");
+    } catch (e) {
+      setDeleteTreeError(String((e as Error).message));
+      setDeleteTreeBusy(false);
+    }
+  }
 
   async function saveTreeName() {
     const next = renameDraft.trim();
@@ -443,6 +464,14 @@ export function Editor() {
           <span className="ml-auto text-xs text-muted-foreground tracking-widest">
             {people.length} people · {user?.email} ({user?.role})
           </span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => { setDeleteTreeOpen(true); setDeleteTreeName(""); setDeleteTreeError(null); }}
+            className="uppercase tracking-widest text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+          >
+            Delete tree
+          </Button>
           <Button size="sm" variant="outline" onClick={logout}>Logout</Button>
           <ThemeToggle />
         </header>
@@ -495,6 +524,57 @@ export function Editor() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog
+        open={deleteTreeOpen}
+        onOpenChange={(o) => {
+          if (!o && !deleteTreeBusy) {
+            setDeleteTreeOpen(false);
+            setDeleteTreeError(null);
+            setDeleteTreeName("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="uppercase tracking-widest text-destructive">
+              Delete "{treeName}"?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p>
+              This deletes the tree and all {people.length} people in it. There is no undo.
+            </p>
+            <p>Type the tree name to confirm:</p>
+            <Input
+              value={deleteTreeName}
+              onChange={(e) => setDeleteTreeName(e.target.value)}
+              placeholder={treeName}
+            />
+            {deleteTreeError && (
+              <Alert variant="destructive">
+                <AlertDescription>{deleteTreeError}</AlertDescription>
+              </Alert>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteTreeOpen(false)}
+              disabled={deleteTreeBusy}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={deleteThisTree}
+              disabled={deleteTreeBusy}
+            >
+              {deleteTreeBusy ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
