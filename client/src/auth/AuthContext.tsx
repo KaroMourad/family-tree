@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { api, getToken, setToken } from "../api/client";
 import type { AppUser } from "../types";
 
@@ -15,6 +16,7 @@ type AuthState = {
 const AuthCtx = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -34,6 +36,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
+    // Drop any cached data from a previous session before showing this user's.
+    queryClient.clear();
     setToken(token);
     setUser(user);
   }
@@ -43,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
+    queryClient.clear();
     setToken(token);
     setUser(user);
   }
@@ -50,6 +55,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function logout() {
     setToken(null);
     setUser(null);
+    // Purge the query cache so the next user never sees the previous user's data.
+    queryClient.clear();
   }
 
   return (
