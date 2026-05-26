@@ -27,7 +27,7 @@ export function DetailPanel({ person, byId, onClose }: Props) {
   const open = !!person;
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <SheetContent side="right" className="w-[360px] sm:max-w-[360px] overflow-y-auto">
+      <SheetContent side="right" className="w-[360px] sm:max-w-[360px]">
         {person && (
           <>
             <SheetHeader>
@@ -35,8 +35,8 @@ export function DetailPanel({ person, byId, onClose }: Props) {
                 {person.name}
               </SheetTitle>
             </SheetHeader>
-            <Separator className="my-3" />
-            <dl className="m-0">
+            <Separator />
+            <dl className="m-0 px-6 pb-6 overflow-y-auto">
               <Row label="ID" value={person.id} />
               <Row label="Nickname" value={person.nickname} />
               <Row label="Gender" value={person.gender} />
