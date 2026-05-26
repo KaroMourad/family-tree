@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import { useTreeList } from "../hooks/useTreeList";
-import type { Tree } from "../types";
+import { useTrees } from "../hooks/useTrees";
+import { useCreateTree } from "../hooks/useTreeMutations";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -20,7 +19,8 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function TreeList() {
   const { user, logout } = useAuth();
-  const { trees, loading, error, refresh } = useTreeList();
+  const { data: trees, isPending: loading, error } = useTrees();
+  const createTreeMutation = useCreateTree();
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
@@ -28,20 +28,17 @@ export function TreeList() {
   const [createError, setCreateError] = useState<string | null>(null);
 
   async function handleCreate() {
-    if (!name.trim()) {
+    const trimmed = name.trim();
+    if (!trimmed) {
       setCreateError("Name is required");
       return;
     }
     setSubmitting(true);
     setCreateError(null);
     try {
-      const created = await api<Tree>("/trees", {
-        method: "POST",
-        body: JSON.stringify({ name: name.trim() }),
-      });
+      const created = await createTreeMutation.mutateAsync(trimmed);
       setName("");
       setCreating(false);
-      await refresh();
       navigate(`/tree/${created.id}/editor`);
     } catch (e) {
       setCreateError(String((e as Error).message));
@@ -81,7 +78,7 @@ export function TreeList() {
         {loading && <p>Loading…</p>}
         {error && (
           <Alert variant="destructive" className="mb-6">
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{error.message}</AlertDescription>
           </Alert>
         )}
 
