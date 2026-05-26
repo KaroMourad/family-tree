@@ -34,10 +34,13 @@ type NodeProps = {
   collapsedAll: number;
   match: Set<string>;
   onSelect: (id: string) => void;
+  onUserToggle: () => void;
 };
 
-function ListNode({ node, collapsedAll, match, onSelect }: NodeProps) {
+function ListNode({ node, collapsedAll, match, onSelect, onUserToggle }: NodeProps) {
   const [open, setOpen] = useState(true);
+  // When the user clicks Expand-all/Collapse-all, force that state; otherwise honour
+  // the per-node `open`. `onUserToggle` lifts a per-node click into per-node mode.
   const isOpen = collapsedAll > 0 ? false : collapsedAll < 0 ? true : open;
   const hasKids = node.children.length > 0;
   const cls = ["card", genderClass(node.gender)];
@@ -49,7 +52,11 @@ function ListNode({ node, collapsedAll, match, onSelect }: NodeProps) {
           className={`toggle${hasKids ? "" : " empty"}`}
           onClick={(e) => {
             e.stopPropagation();
-            setOpen((v) => !v);
+            if (!hasKids) return;
+            // Pin this node's intended state to the value we're about to flip to,
+            // so it survives the switch out of Expand-all / Collapse-all mode.
+            setOpen(!isOpen);
+            onUserToggle();
           }}
         >
           {hasKids ? (isOpen ? "−" : "+") : "·"}
@@ -61,7 +68,7 @@ function ListNode({ node, collapsedAll, match, onSelect }: NodeProps) {
       {hasKids && (
         <ul>
           {node.children.map((c) => (
-            <ListNode key={c.id} node={c} collapsedAll={collapsedAll} match={match} onSelect={onSelect} />
+            <ListNode key={c.id} node={c} collapsedAll={collapsedAll} match={match} onSelect={onSelect} onUserToggle={onUserToggle} />
           ))}
         </ul>
       )}
@@ -135,7 +142,7 @@ export function ListView() {
       <div className="flex-1 min-h-0 p-6 overflow-auto">
         <ul className="tree-list">
           {roots.map((r) => (
-            <ListNode key={r.id} node={r} collapsedAll={collapsedAll} match={matches} onSelect={setSelectedId} />
+            <ListNode key={r.id} node={r} collapsedAll={collapsedAll} match={matches} onSelect={setSelectedId} onUserToggle={() => setCollapsedAll(0)} />
           ))}
         </ul>
       </div>
