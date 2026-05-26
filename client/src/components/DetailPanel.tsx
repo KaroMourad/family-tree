@@ -36,7 +36,7 @@ export function DetailPanel({ person, byId, onClose }: Props) {
               </SheetTitle>
             </SheetHeader>
             <Separator />
-            <dl className="m-0 px-6 pb-6 overflow-y-auto">
+            <dl className="m-0 p-4 overflow-y-auto">
               <Row label="ID" value={person.id} />
               <Row label="Nickname" value={person.nickname} />
               <Row label="Gender" value={person.gender} />
