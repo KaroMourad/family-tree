@@ -91,9 +91,8 @@ function PersonForm({
   const [error, setError] = useState<string | null>(null);
   const hasMoreInitial =
     !!(initial.nickname || initial.surnameBirth || initial.surnameNow ||
-       initial.birthYear || initial.deathYear || initial.birthPlace ||
-       initial.deathPlace || initial.partnerName || initial.profession ||
-       initial.deceased || initial.bio);
+       initial.birthYear || initial.deathYear ||
+       initial.partnerName || initial.profession || initial.bio);
   const [moreOpen, setMoreOpen] = useState(hasMoreInitial);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -187,17 +186,6 @@ function PersonForm({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="uppercase tracking-widest text-xs text-secondary">Birth place</Label>
-                  <Input value={form.birthPlace ?? ""} onChange={(e) => update("birthPlace", e.target.value || null)} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="uppercase tracking-widest text-xs text-secondary">Death place</Label>
-                  <Input value={form.deathPlace ?? ""} onChange={(e) => update("deathPlace", e.target.value || null)} />
-                </div>
-              </div>
-
               <div className="space-y-1.5">
                 <Label className="uppercase tracking-widest text-xs text-secondary">Partner name</Label>
                 <Input value={form.partnerName ?? ""} onChange={(e) => update("partnerName", e.target.value || null)} />
@@ -206,20 +194,6 @@ function PersonForm({
               <div className="space-y-1.5">
                 <Label className="uppercase tracking-widest text-xs text-secondary">Profession</Label>
                 <Input value={form.profession ?? ""} onChange={(e) => update("profession", e.target.value || null)} />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="uppercase tracking-widest text-xs text-secondary">Deceased</Label>
-                <Select value={form.deceased ?? "_unset"} onValueChange={(v) => update("deceased", v === "_unset" ? null : v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="—" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_unset">—</SelectItem>
-                    <SelectItem value="Yes">Yes</SelectItem>
-                    <SelectItem value="No">No</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
 
               <div className="space-y-1.5">
