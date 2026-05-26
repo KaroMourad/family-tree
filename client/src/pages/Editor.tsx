@@ -114,12 +114,12 @@ function PersonForm({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o && !busy) onCancel(); }}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-xl max-h-[90vh] flex flex-col gap-0 p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
           <DialogTitle className="uppercase tracking-widest text-primary">{title}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-3">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-3">
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
@@ -208,7 +208,7 @@ function PersonForm({
           </Collapsible>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="px-6 py-4 border-t border-border shrink-0">
           <Button variant="outline" onClick={onCancel} disabled={busy}>Cancel</Button>
           <Button onClick={submit} disabled={busy}>
             {busy ? "Saving…" : "Save"}
