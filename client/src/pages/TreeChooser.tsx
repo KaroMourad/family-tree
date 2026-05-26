@@ -64,22 +64,21 @@ export function TreeChooser() {
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground py-12 px-5">
-      <div className="fixed top-4 right-4 z-50 flex items-center gap-3 text-xs text-muted-foreground tracking-widest">
-        <Link to="/" className="text-primary hover:underline">← All trees</Link>
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-50 flex items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur text-xs text-muted-foreground tracking-widest">
+        <Button asChild variant="outline" size="sm" className="uppercase tracking-widest">
+          <Link to="/">← All trees</Link>
+        </Button>
         {user && (
-          <>
-            <span>·</span>
-            <span>
-              Signed in as <strong className="text-foreground">{user.email}</strong> ({user.role})
-            </span>
-            <Button variant="outline" size="sm" onClick={logout}>Logout</Button>
-          </>
+          <span className="truncate ml-auto">
+            Signed in as <strong className="text-foreground">{user.email}</strong> ({user.role})
+          </span>
         )}
+        {user && <Button variant="outline" size="sm" onClick={logout}>Logout</Button>}
         <ThemeToggle />
-      </div>
+      </header>
 
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-5xl mx-auto py-12 px-5">
         <header className="text-center mb-14">
           <h1 className="text-5xl text-primary uppercase tracking-[0.2em] font-semibold m-0">
             ◆ {tree.name} ◆

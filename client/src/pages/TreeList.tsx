@@ -51,20 +51,20 @@ export function TreeList() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground py-12 px-5">
-      <div className="fixed top-4 right-4 z-50 flex items-center gap-3 text-xs text-muted-foreground tracking-widest">
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-50 flex items-center justify-end gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur text-xs text-muted-foreground tracking-widest">
         {user && (
           <>
-            <span>
+            <span className="truncate">
               Signed in as <strong className="text-foreground">{user.email}</strong> ({user.role})
             </span>
             <Button variant="outline" size="sm" onClick={logout}>Logout</Button>
           </>
         )}
         <ThemeToggle />
-      </div>
+      </header>
 
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-5xl mx-auto py-12 px-5">
         <header className="text-center mb-14">
           <h1 className="text-5xl text-primary uppercase tracking-[0.2em] font-semibold m-0">
             ◆ Your Trees ◆
