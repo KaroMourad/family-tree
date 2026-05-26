@@ -22,7 +22,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { ChevronDown } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -83,6 +89,12 @@ function PersonForm({
   const [form, setForm] = useState<FormState>(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasMoreInitial =
+    !!(initial.nickname || initial.surnameBirth || initial.surnameNow ||
+       initial.birthYear || initial.deathYear || initial.birthPlace ||
+       initial.deathPlace || initial.partnerName || initial.profession ||
+       initial.deceased || initial.bio);
+  const [moreOpen, setMoreOpen] = useState(hasMoreInitial);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -120,99 +132,106 @@ function PersonForm({
             <Input value={form.name} onChange={(e) => update("name", e.target.value)} required />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="uppercase tracking-widest text-xs text-secondary">Gender</Label>
-              <Select value={form.gender ?? "_unset"} onValueChange={(v) => update("gender", v === "_unset" ? null : v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="—" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_unset">—</SelectItem>
-                  <SelectItem value="Male">Male</SelectItem>
-                  <SelectItem value="Female">Female</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="uppercase tracking-widest text-xs text-secondary">Nickname</Label>
-              <Input value={form.nickname ?? ""} onChange={(e) => update("nickname", e.target.value || null)} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="uppercase tracking-widest text-xs text-secondary">Surname (birth)</Label>
-              <Input value={form.surnameBirth ?? ""} onChange={(e) => update("surnameBirth", e.target.value || null)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="uppercase tracking-widest text-xs text-secondary">Surname (now)</Label>
-              <Input value={form.surnameNow ?? ""} onChange={(e) => update("surnameNow", e.target.value || null)} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="uppercase tracking-widest text-xs text-secondary">Birth year</Label>
-              <Input
-                type="number"
-                value={form.birthYear ?? ""}
-                onChange={(e) => update("birthYear", e.target.value ? Number(e.target.value) : null)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="uppercase tracking-widest text-xs text-secondary">Death year</Label>
-              <Input
-                type="number"
-                value={form.deathYear ?? ""}
-                onChange={(e) => update("deathYear", e.target.value ? Number(e.target.value) : null)}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="uppercase tracking-widest text-xs text-secondary">Birth place</Label>
-              <Input value={form.birthPlace ?? ""} onChange={(e) => update("birthPlace", e.target.value || null)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="uppercase tracking-widest text-xs text-secondary">Death place</Label>
-              <Input value={form.deathPlace ?? ""} onChange={(e) => update("deathPlace", e.target.value || null)} />
-            </div>
-          </div>
-
           <div className="space-y-1.5">
-            <Label className="uppercase tracking-widest text-xs text-secondary">Partner name</Label>
-            <Input value={form.partnerName ?? ""} onChange={(e) => update("partnerName", e.target.value || null)} />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="uppercase tracking-widest text-xs text-secondary">Profession</Label>
-            <Input value={form.profession ?? ""} onChange={(e) => update("profession", e.target.value || null)} />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="uppercase tracking-widest text-xs text-secondary">Deceased</Label>
-            <Select value={form.deceased ?? "_unset"} onValueChange={(v) => update("deceased", v === "_unset" ? null : v)}>
+            <Label className="uppercase tracking-widest text-xs text-secondary">Gender</Label>
+            <Select value={form.gender ?? "_unset"} onValueChange={(v) => update("gender", v === "_unset" ? null : v)}>
               <SelectTrigger>
                 <SelectValue placeholder="—" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="_unset">—</SelectItem>
-                <SelectItem value="Yes">Yes</SelectItem>
-                <SelectItem value="No">No</SelectItem>
+                <SelectItem value="Male">Male</SelectItem>
+                <SelectItem value="Female">Female</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="uppercase tracking-widest text-xs text-secondary">Notes / Bio</Label>
-            <Textarea
-              value={form.bio ?? ""}
-              onChange={(e) => update("bio", e.target.value || null)}
-              className="min-h-[60px]"
-            />
-          </div>
+          <Collapsible open={moreOpen} onOpenChange={setMoreOpen}>
+            <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-2 text-xs uppercase tracking-widest text-secondary hover:bg-muted/60 transition-colors">
+              <span>More details</span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${moreOpen ? "rotate-180" : ""}`} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3 pt-3">
+              <div className="space-y-1.5">
+                <Label className="uppercase tracking-widest text-xs text-secondary">Nickname</Label>
+                <Input value={form.nickname ?? ""} onChange={(e) => update("nickname", e.target.value || null)} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="uppercase tracking-widest text-xs text-secondary">Surname (birth)</Label>
+                  <Input value={form.surnameBirth ?? ""} onChange={(e) => update("surnameBirth", e.target.value || null)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="uppercase tracking-widest text-xs text-secondary">Surname (now)</Label>
+                  <Input value={form.surnameNow ?? ""} onChange={(e) => update("surnameNow", e.target.value || null)} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="uppercase tracking-widest text-xs text-secondary">Birth year</Label>
+                  <Input
+                    type="number"
+                    value={form.birthYear ?? ""}
+                    onChange={(e) => update("birthYear", e.target.value ? Number(e.target.value) : null)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="uppercase tracking-widest text-xs text-secondary">Death year</Label>
+                  <Input
+                    type="number"
+                    value={form.deathYear ?? ""}
+                    onChange={(e) => update("deathYear", e.target.value ? Number(e.target.value) : null)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="uppercase tracking-widest text-xs text-secondary">Birth place</Label>
+                  <Input value={form.birthPlace ?? ""} onChange={(e) => update("birthPlace", e.target.value || null)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="uppercase tracking-widest text-xs text-secondary">Death place</Label>
+                  <Input value={form.deathPlace ?? ""} onChange={(e) => update("deathPlace", e.target.value || null)} />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="uppercase tracking-widest text-xs text-secondary">Partner name</Label>
+                <Input value={form.partnerName ?? ""} onChange={(e) => update("partnerName", e.target.value || null)} />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="uppercase tracking-widest text-xs text-secondary">Profession</Label>
+                <Input value={form.profession ?? ""} onChange={(e) => update("profession", e.target.value || null)} />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="uppercase tracking-widest text-xs text-secondary">Deceased</Label>
+                <Select value={form.deceased ?? "_unset"} onValueChange={(v) => update("deceased", v === "_unset" ? null : v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="—" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_unset">—</SelectItem>
+                    <SelectItem value="Yes">Yes</SelectItem>
+                    <SelectItem value="No">No</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="uppercase tracking-widest text-xs text-secondary">Notes / Bio</Label>
+                <Textarea
+                  value={form.bio ?? ""}
+                  onChange={(e) => update("bio", e.target.value || null)}
+                  className="min-h-[60px]"
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
 
         <DialogFooter>
