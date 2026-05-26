@@ -400,6 +400,9 @@ export function Editor() {
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       <header className="shrink-0 z-10 flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur">
+          <Button asChild variant="outline" size="sm" className="uppercase tracking-widest">
+            <Link to={`/tree/${treeId}`}>← Views</Link>
+          </Button>
           {renaming ? (
             <span className="inline-flex items-center gap-2">
               <Input
@@ -434,9 +437,6 @@ export function Editor() {
               ◆ {treeName} ✎
             </h1>
           )}
-          <Button asChild variant="outline" size="sm" className="uppercase tracking-widest">
-            <Link to={`/tree/${treeId}`}>← Views</Link>
-          </Button>
           <Button size="sm" onClick={() => setEditorState({ mode: "create", person: emptyForm(null) })} className="uppercase tracking-widest">
             + Root person
           </Button>

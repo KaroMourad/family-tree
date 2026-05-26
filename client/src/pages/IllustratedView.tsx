@@ -234,12 +234,12 @@ export function IllustratedView() {
   return (
     <div className="compact flex flex-col h-screen overflow-hidden bg-background text-foreground">
       <header className="shrink-0 z-10 flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur">
-        <h1 className="m-0 text-lg font-semibold text-primary uppercase tracking-[0.15em]">
-          ◆ Illustrated Tree
-        </h1>
         <Button asChild variant="outline" size="sm" className="uppercase tracking-widest">
           <Link to={`/tree/${treeId}`}>← Views</Link>
         </Button>
+        <h1 className="m-0 text-lg font-semibold text-primary uppercase tracking-[0.15em]">
+          ◆ Illustrated Tree
+        </h1>
         <Input
           type="search"
           placeholder="Search by name..."
