@@ -1,8 +1,11 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { allRoots, flattenTree, useTree } from "../hooks/useTree";
 import { DetailPanel } from "../components/DetailPanel";
 import type { TreeNode } from "../types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import "../styles/views.css";
 
 function genderClass(g?: string | null) {
@@ -28,14 +31,14 @@ function dateRange(p: TreeNode) {
 
 type NodeProps = {
   node: TreeNode;
-  collapsedAll: number;
+  isOpen: boolean;
   match: Set<string>;
+  isOpenFor: (id: string) => boolean;
   onSelect: (id: string) => void;
+  onToggle: (id: string) => void;
 };
 
-function ListNode({ node, collapsedAll, match, onSelect }: NodeProps) {
-  const [open, setOpen] = useState(true);
-  const isOpen = collapsedAll > 0 ? false : collapsedAll < 0 ? true : open;
+function ListNode({ node, isOpen, match, isOpenFor, onSelect, onToggle }: NodeProps) {
   const hasKids = node.children.length > 0;
   const cls = ["card", genderClass(node.gender)];
   if (isDeceased(node.deceased)) cls.push("deceased");
@@ -46,7 +49,8 @@ function ListNode({ node, collapsedAll, match, onSelect }: NodeProps) {
           className={`toggle${hasKids ? "" : " empty"}`}
           onClick={(e) => {
             e.stopPropagation();
-            setOpen((v) => !v);
+            if (!hasKids) return;
+            onToggle(node.id);
           }}
         >
           {hasKids ? (isOpen ? "−" : "+") : "·"}
@@ -58,7 +62,15 @@ function ListNode({ node, collapsedAll, match, onSelect }: NodeProps) {
       {hasKids && (
         <ul>
           {node.children.map((c) => (
-            <ListNode key={c.id} node={c} collapsedAll={collapsedAll} match={match} onSelect={onSelect} />
+            <ListNode
+              key={c.id}
+              node={c}
+              isOpen={isOpenFor(c.id)}
+              match={match}
+              isOpenFor={isOpenFor}
+              onSelect={onSelect}
+              onToggle={onToggle}
+            />
           ))}
         </ul>
       )}
@@ -71,10 +83,39 @@ export function ListView() {
   const { tree, loading, error } = useTree(treeId);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [q, setQ] = useState("");
-  const [collapsedAll, setCollapsedAll] = useState(-1); // -1 = all open, 1 = all closed, 0 = per-node
+  // Set of node IDs that are explicitly open. Default behaviour (when an id is
+  // NOT in the set) is controlled by `defaultOpen`. Expand-all → defaultOpen=true,
+  // open set cleared. Collapse-all → defaultOpen=false, open set cleared. Per-node
+  // clicks add/remove individual ids and flip defaultOpen so the clicked node's
+  // membership in `openIds` always means "the opposite of defaultOpen".
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+  const [defaultOpen, setDefaultOpen] = useState(true);
 
   const byId = useMemo(() => flattenTree(tree), [tree]);
   const roots = useMemo(() => allRoots(tree), [tree]);
+
+  const isOpenFor = useCallback(
+    (id: string) => (openIds.has(id) ? !defaultOpen : defaultOpen),
+    [openIds, defaultOpen],
+  );
+
+  const toggleId = useCallback((id: string) => {
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  function expandAll() {
+    setDefaultOpen(true);
+    setOpenIds(new Set());
+  }
+  function collapseAll() {
+    setDefaultOpen(false);
+    setOpenIds(new Set());
+  }
 
   const matches = useMemo(() => {
     const set = new Set<string>();
@@ -87,13 +128,13 @@ export function ListView() {
     return set;
   }, [q, byId]);
 
-  if (loading) return <div style={{ padding: 40 }}>Loading…</div>;
-  if (error) return <div style={{ padding: 40, color: "var(--coral)" }}>Error: {error}</div>;
+  if (loading) return <div className="p-10">Loading…</div>;
+  if (error) return <div className="p-10 text-destructive">Error: {error}</div>;
   if (Array.isArray(tree) && tree.length === 0) {
     return (
-      <div style={{ padding: 40 }}>
+      <div className="p-10">
         <p>This tree is empty.</p>
-        <p><Link to={`/tree/${treeId}/editor`}>Open the editor to add people.</Link></p>
+        <p><Link to={`/tree/${treeId}/editor`} className="text-primary hover:underline">Open the editor to add people.</Link></p>
       </div>
     );
   }
@@ -102,27 +143,45 @@ export function ListView() {
   const peopleCount = Object.keys(byId).length;
 
   return (
-    <div className="view-shell">
-      <header className="view-header">
-        <h1>◆ Family Tree</h1>
-        <Link className="btn" to={`/tree/${treeId}`}>← Views</Link>
-        <input
+    <div className="flex flex-col h-screen bg-background text-foreground">
+      <header className="shrink-0 z-10 flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur">
+        <Button asChild variant="outline" size="sm" className="uppercase tracking-widest">
+          <Link to={`/tree/${treeId}`}>← Views</Link>
+        </Button>
+        <h1 className="m-0 text-lg font-semibold text-primary uppercase tracking-[0.15em]">
+          ◆ Family Tree
+        </h1>
+        <Input
           type="search"
           placeholder="Search by name or ID..."
           value={q}
           onChange={(e) => setQ(e.target.value)}
+          className="w-56"
         />
-        <button onClick={() => setCollapsedAll(-1)}>Expand all</button>
-        <button onClick={() => setCollapsedAll(1)}>Collapse all</button>
-        <span className="stats">
+        <Button variant="outline" size="sm" onClick={expandAll} className="uppercase tracking-widest">
+          Expand all
+        </Button>
+        <Button variant="outline" size="sm" onClick={collapseAll} className="uppercase tracking-widest">
+          Collapse all
+        </Button>
+        <span className="ml-auto text-xs text-muted-foreground tracking-widest">
           {peopleCount} people · {roots.length} root line{roots.length === 1 ? "" : "s"}
         </span>
+        <ThemeToggle />
       </header>
 
-      <div className="tree-list-wrap">
+      <div className="flex-1 min-h-0 p-6 overflow-auto">
         <ul className="tree-list">
           {roots.map((r) => (
-            <ListNode key={r.id} node={r} collapsedAll={collapsedAll} match={matches} onSelect={setSelectedId} />
+            <ListNode
+              key={r.id}
+              node={r}
+              isOpen={isOpenFor(r.id)}
+              match={matches}
+              isOpenFor={isOpenFor}
+              onSelect={setSelectedId}
+              onToggle={toggleId}
+            />
           ))}
         </ul>
       </div>

@@ -1,7 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import "../styles/views.css";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function Login() {
   const { login } = useAuth();
@@ -29,19 +34,58 @@ export function Login() {
   }
 
   return (
-    <div className="auth-wrap">
-      <form className="auth-card" onSubmit={onSubmit}>
-        <h2>◆ Login ◆</h2>
-        {error && <div className="error">{error}</div>}
-        <label htmlFor="email">Email</label>
-        <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <label htmlFor="password">Password</label>
-        <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-        <button type="submit" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
-        <div className="alt">
-          No account? <Link to="/register">Register</Link> · <Link to="/">Back</Link>
-        </div>
-      </form>
+    <div className="relative min-h-screen flex items-center justify-center p-5 bg-background">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle className="text-center uppercase tracking-[0.2em] text-primary text-lg">
+            ◆ Login ◆
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={onSubmit} className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="email" className="uppercase tracking-widest text-xs text-secondary">
+                Email
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password" className="uppercase tracking-widest text-xs text-secondary">
+                Password
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" disabled={busy} className="w-full uppercase tracking-widest">
+              {busy ? "Signing in…" : "Sign in"}
+            </Button>
+            <p className="text-center text-xs text-muted-foreground tracking-wider">
+              No account? <Link to="/register" className="text-primary hover:underline">Register</Link>
+              {" · "}
+              <Link to="/" className="text-primary hover:underline">Back</Link>
+            </p>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

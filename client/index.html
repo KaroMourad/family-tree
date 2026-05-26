@@ -5,6 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <title>Armenian Family Tree</title>
+    <script>
+      // Set theme class before first paint to avoid FOUC. Mirrors ThemeProvider.
+      (function () {
+        try {
+          var stored = localStorage.getItem("ft.theme");
+          var theme = stored === "light" || stored === "dark" ? stored
+            : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          document.documentElement.classList.add(theme);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

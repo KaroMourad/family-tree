@@ -4,6 +4,9 @@ import * as d3 from "d3";
 import { firstRoot, flattenTree, useTree } from "../hooks/useTree";
 import { DetailPanel } from "../components/DetailPanel";
 import type { TreeNode } from "../types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import "../styles/views.css";
 
 // Recursive line-art tree (port of build_freepik.py)
@@ -214,33 +217,44 @@ export function IllustratedView() {
     );
   }
 
-  if (loading) return <div style={{ padding: 40 }}>Loading…</div>;
-  if (error) return <div style={{ padding: 40, color: "var(--coral)" }}>Error: {error}</div>;
+  if (loading) return <div className="p-10">Loading…</div>;
+  if (error) return <div className="p-10 text-destructive">Error: {error}</div>;
   if (Array.isArray(tree) && tree.length === 0) {
     return (
-      <div style={{ padding: 40 }}>
+      <div className="p-10">
         <p>This tree is empty.</p>
-        <p><Link to={`/tree/${treeId}/editor`}>Open the editor to add people.</Link></p>
+        <p><Link to={`/tree/${treeId}/editor`} className="text-primary hover:underline">Open the editor to add people.</Link></p>
       </div>
     );
   }
-  if (!root) return <div style={{ padding: 40 }}>No data.</div>;
+  if (!root) return <div className="p-10">No data.</div>;
 
   const selected = selectedId ? byId[selectedId] ?? null : null;
 
   return (
-    <div className="view-shell compact" style={{ height: "100vh", overflow: "hidden" }}>
-      <header className="view-header">
-        <h1>◆ Family Tree</h1>
-        <Link className="btn" to={`/tree/${treeId}`}>← Views</Link>
-        <input type="search" placeholder="Search by name..." value={q} onChange={(e) => setQ(e.target.value)} />
-        <button onClick={fit}>Fit</button>
-        <button onClick={() => zoomRef.current && d3.select(svgRef.current!).transition().call(zoomRef.current.scaleBy as any, 1.3)}>+</button>
-        <button onClick={() => zoomRef.current && d3.select(svgRef.current!).transition().call(zoomRef.current.scaleBy as any, 1 / 1.3)}>−</button>
-        <span className="stats">{Object.keys(byId).length} members</span>
+    <div className="compact flex flex-col h-screen overflow-hidden bg-background text-foreground">
+      <header className="shrink-0 z-10 flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur">
+        <Button asChild variant="outline" size="sm" className="uppercase tracking-widest">
+          <Link to={`/tree/${treeId}`}>← Views</Link>
+        </Button>
+        <h1 className="m-0 text-lg font-semibold text-primary uppercase tracking-[0.15em]">
+          ◆ Illustrated Tree
+        </h1>
+        <Input
+          type="search"
+          placeholder="Search by name..."
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="w-56"
+        />
+        <Button variant="outline" size="sm" onClick={fit} className="uppercase tracking-widest">Fit</Button>
+        <Button variant="outline" size="sm" onClick={() => zoomRef.current && d3.select(svgRef.current!).transition().call(zoomRef.current.scaleBy as any, 1.3)}>+</Button>
+        <Button variant="outline" size="sm" onClick={() => zoomRef.current && d3.select(svgRef.current!).transition().call(zoomRef.current.scaleBy as any, 1 / 1.3)}>−</Button>
+        <span className="ml-auto text-xs text-muted-foreground tracking-widest">{Object.keys(byId).length} members</span>
+        <ThemeToggle />
       </header>
-      <div className="svg-wrap">
-        <svg ref={svgRef} />
+      <div className="flex-1 min-h-0 relative overflow-hidden">
+        <svg ref={svgRef} className="block w-full h-full cursor-grab active:cursor-grabbing bg-background" />
       </div>
       <DetailPanel person={selected as TreeNode | null} byId={byId} onClose={() => setSelectedId(null)} />
     </div>

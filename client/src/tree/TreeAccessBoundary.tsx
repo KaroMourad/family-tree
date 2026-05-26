@@ -49,7 +49,7 @@ export function TreeAccessBoundary({ children }: { children: ReactNode }) {
     );
   }
   if (status === "error") {
-    return <div style={{ padding: 40, color: "var(--coral)" }}>Error: {errorMsg}</div>;
+    return <div className="p-10 text-destructive">Error: {errorMsg}</div>;
   }
   return <TreeContext.Provider value={tree!}>{children}</TreeContext.Provider>;
 }
