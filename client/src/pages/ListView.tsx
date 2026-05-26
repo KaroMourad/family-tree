@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { allRoots, flattenTree, useTree } from "../hooks/useTree";
 import { DetailPanel } from "../components/DetailPanel";
@@ -31,17 +31,14 @@ function dateRange(p: TreeNode) {
 
 type NodeProps = {
   node: TreeNode;
-  collapsedAll: number;
+  isOpen: boolean;
   match: Set<string>;
+  isOpenFor: (id: string) => boolean;
   onSelect: (id: string) => void;
-  onUserToggle: () => void;
+  onToggle: (id: string) => void;
 };
 
-function ListNode({ node, collapsedAll, match, onSelect, onUserToggle }: NodeProps) {
-  const [open, setOpen] = useState(true);
-  // When the user clicks Expand-all/Collapse-all, force that state; otherwise honour
-  // the per-node `open`. `onUserToggle` lifts a per-node click into per-node mode.
-  const isOpen = collapsedAll > 0 ? false : collapsedAll < 0 ? true : open;
+function ListNode({ node, isOpen, match, isOpenFor, onSelect, onToggle }: NodeProps) {
   const hasKids = node.children.length > 0;
   const cls = ["card", genderClass(node.gender)];
   if (isDeceased(node.deceased)) cls.push("deceased");
@@ -53,10 +50,7 @@ function ListNode({ node, collapsedAll, match, onSelect, onUserToggle }: NodePro
           onClick={(e) => {
             e.stopPropagation();
             if (!hasKids) return;
-            // Pin this node's intended state to the value we're about to flip to,
-            // so it survives the switch out of Expand-all / Collapse-all mode.
-            setOpen(!isOpen);
-            onUserToggle();
+            onToggle(node.id);
           }}
         >
           {hasKids ? (isOpen ? "−" : "+") : "·"}
@@ -68,7 +62,15 @@ function ListNode({ node, collapsedAll, match, onSelect, onUserToggle }: NodePro
       {hasKids && (
         <ul>
           {node.children.map((c) => (
-            <ListNode key={c.id} node={c} collapsedAll={collapsedAll} match={match} onSelect={onSelect} onUserToggle={onUserToggle} />
+            <ListNode
+              key={c.id}
+              node={c}
+              isOpen={isOpenFor(c.id)}
+              match={match}
+              isOpenFor={isOpenFor}
+              onSelect={onSelect}
+              onToggle={onToggle}
+            />
           ))}
         </ul>
       )}
@@ -81,10 +83,39 @@ export function ListView() {
   const { tree, loading, error } = useTree(treeId);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [q, setQ] = useState("");
-  const [collapsedAll, setCollapsedAll] = useState(-1); // -1 = all open, 1 = all closed, 0 = per-node
+  // Set of node IDs that are explicitly open. Default behaviour (when an id is
+  // NOT in the set) is controlled by `defaultOpen`. Expand-all → defaultOpen=true,
+  // open set cleared. Collapse-all → defaultOpen=false, open set cleared. Per-node
+  // clicks add/remove individual ids and flip defaultOpen so the clicked node's
+  // membership in `openIds` always means "the opposite of defaultOpen".
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+  const [defaultOpen, setDefaultOpen] = useState(true);
 
   const byId = useMemo(() => flattenTree(tree), [tree]);
   const roots = useMemo(() => allRoots(tree), [tree]);
+
+  const isOpenFor = useCallback(
+    (id: string) => (openIds.has(id) ? !defaultOpen : defaultOpen),
+    [openIds, defaultOpen],
+  );
+
+  const toggleId = useCallback((id: string) => {
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  function expandAll() {
+    setDefaultOpen(true);
+    setOpenIds(new Set());
+  }
+  function collapseAll() {
+    setDefaultOpen(false);
+    setOpenIds(new Set());
+  }
 
   const matches = useMemo(() => {
     const set = new Set<string>();
@@ -127,10 +158,10 @@ export function ListView() {
           onChange={(e) => setQ(e.target.value)}
           className="w-56"
         />
-        <Button variant="outline" size="sm" onClick={() => setCollapsedAll(-1)} className="uppercase tracking-widest">
+        <Button variant="outline" size="sm" onClick={expandAll} className="uppercase tracking-widest">
           Expand all
         </Button>
-        <Button variant="outline" size="sm" onClick={() => setCollapsedAll(1)} className="uppercase tracking-widest">
+        <Button variant="outline" size="sm" onClick={collapseAll} className="uppercase tracking-widest">
           Collapse all
         </Button>
         <span className="ml-auto text-xs text-muted-foreground tracking-widest">
@@ -142,7 +173,15 @@ export function ListView() {
       <div className="flex-1 min-h-0 p-6 overflow-auto">
         <ul className="tree-list">
           {roots.map((r) => (
-            <ListNode key={r.id} node={r} collapsedAll={collapsedAll} match={matches} onSelect={setSelectedId} onUserToggle={() => setCollapsedAll(0)} />
+            <ListNode
+              key={r.id}
+              node={r}
+              isOpen={isOpenFor(r.id)}
+              match={matches}
+              isOpenFor={isOpenFor}
+              onSelect={setSelectedId}
+              onToggle={toggleId}
+            />
           ))}
         </ul>
       </div>
