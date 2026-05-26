@@ -134,18 +134,30 @@ export function useRenameTree(treeId: string) {
         body: JSON.stringify({ name }),
       }),
     onMutate: async (name) => {
+      // Patch both the tree-list cache (TreeList cards) and the single-tree
+      // cache (TreeContext via TreeAccessBoundary) so the new name shows
+      // immediately everywhere.
       await qc.cancelQueries({ queryKey: queryKeys.trees() });
-      const prev = qc.getQueryData<TreeSummary[]>(queryKeys.trees());
+      await qc.cancelQueries({ queryKey: queryKeys.tree(treeId), exact: true });
+      const prevList = qc.getQueryData<TreeSummary[]>(queryKeys.trees());
+      const prevTree = qc.getQueryData<Tree>(queryKeys.tree(treeId));
       qc.setQueryData<TreeSummary[]>(queryKeys.trees(), (old = []) =>
         old.map((t) => (t.id === treeId ? { ...t, name } : t)),
       );
-      return { prev };
+      qc.setQueryData<Tree>(queryKeys.tree(treeId), (old) =>
+        old ? { ...old, name } : old,
+      );
+      return { prevList, prevTree };
     },
     onError: (err, _vars, ctx) => {
-      if (ctx?.prev) qc.setQueryData(queryKeys.trees(), ctx.prev);
+      if (ctx?.prevList) qc.setQueryData(queryKeys.trees(), ctx.prevList);
+      if (ctx?.prevTree) qc.setQueryData(queryKeys.tree(treeId), ctx.prevTree);
       toast.error(`Couldn't rename tree: ${(err as Error).message}`);
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: queryKeys.trees() }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.trees() });
+      qc.invalidateQueries({ queryKey: queryKeys.tree(treeId), exact: true });
+    },
   });
 }
 
