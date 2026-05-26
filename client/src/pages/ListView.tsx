@@ -84,7 +84,6 @@ export function ListView() {
   const { treeId } = useParams();
   const { data: people, isPending: loading, error } = usePeople(treeId);
   const tree = useMemo(() => (people ? nestPeople(people) : null), [people]);
-  const selectedId = useUIStore((s) => s.selectedPersonId);
   const setSelectedId = useUIStore((s) => s.setSelectedPerson);
   const q = useUIStore((s) => s.searchQuery);
   const setQ = useUIStore((s) => s.setSearchQuery);
@@ -148,7 +147,6 @@ export function ListView() {
     );
   }
 
-  const selected = selectedId ? byId[selectedId] ?? null : null;
   const peopleCount = Object.keys(byId).length;
 
   return (
@@ -195,7 +193,7 @@ export function ListView() {
         </ul>
       </div>
 
-      <DetailPanel person={selected as TreeNode | null} byId={byId} onClose={() => setSelectedId(null)} />
+      <DetailPanel />
     </div>
   );
 }

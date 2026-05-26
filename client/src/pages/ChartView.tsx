@@ -37,7 +37,6 @@ export function ChartView() {
   const gRef = useRef<SVGGElement | null>(null);
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
   const [orientation, setOrientation] = useState<"vertical" | "horizontal">("vertical");
-  const selectedId = useUIStore((s) => s.selectedPersonId);
   const setSelectedId = useUIStore((s) => s.setSelectedPerson);
   const q = useUIStore((s) => s.searchQuery);
   const setQ = useUIStore((s) => s.setSearchQuery);
@@ -191,7 +190,6 @@ export function ChartView() {
   }
   if (!root) return <div className="p-10">No data.</div>;
 
-  const selected = selectedId ? byId[selectedId] ?? null : null;
 
   return (
     <div className="chart flex flex-col h-screen overflow-hidden bg-background text-foreground">
@@ -219,7 +217,7 @@ export function ChartView() {
       <div className="flex-1 min-h-0 relative overflow-hidden">
         <svg ref={svgRef} className="block w-full h-full cursor-grab active:cursor-grabbing bg-background" />
       </div>
-      <DetailPanel person={selected as TreeNode | null} byId={byId} onClose={() => setSelectedId(null)} />
+      <DetailPanel />
     </div>
   );
 }
