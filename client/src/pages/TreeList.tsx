@@ -52,10 +52,13 @@ export function TreeList() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-50 flex items-center justify-end gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur text-xs text-muted-foreground tracking-widest">
+      <header className="sticky top-0 z-50 flex items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur text-xs text-muted-foreground tracking-widest">
+        <Button size="sm" onClick={() => setCreating(true)} className="uppercase tracking-widest">
+          + New Tree
+        </Button>
         {user && (
           <>
-            <span className="truncate">
+            <span className="truncate ml-auto">
               Signed in as <strong className="text-foreground">{user.email}</strong> ({user.role})
             </span>
             <Button variant="outline" size="sm" onClick={logout}>Logout</Button>
@@ -114,11 +117,6 @@ export function TreeList() {
           </div>
         )}
 
-        <div className="mt-8 text-center">
-          <Button onClick={() => setCreating(true)} className="uppercase tracking-widest">
-            + New Tree
-          </Button>
-        </div>
       </div>
 
       <Dialog open={creating} onOpenChange={(open) => { if (!open) { setCreating(false); setCreateError(null); } }}>
