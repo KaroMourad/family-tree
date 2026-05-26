@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { useTree, allRoots, flattenTree } from "../hooks/useTree";
+import { usePeople } from "../hooks/usePeople";
+import { allRoots, nestPeople } from "../api/nest";
 import { useTreeContext } from "../tree/TreeContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,9 +19,9 @@ type ViewCard = {
 export function TreeChooser() {
   const tree = useTreeContext();
   const { user, logout } = useAuth();
-  const { tree: nestedTree } = useTree(tree.id);
-  const peopleCount = Object.keys(flattenTree(nestedTree)).length;
-  const rootName = allRoots(nestedTree)[0]?.name ?? "";
+  const { data: people } = usePeople(tree.id);
+  const peopleCount = people?.length ?? 0;
+  const rootName = people ? (allRoots(nestPeople(people))[0]?.name ?? "") : "";
 
   const views: ViewCard[] = [
     { to: `/tree/${tree.id}/list`, icon: "≡", title: "Indented List", desc: "Classic expandable tree with names, dates, and full details.", tag: "Compact" },
