@@ -392,8 +392,8 @@ export function Editor() {
   if (error) return <div className="p-10 text-destructive">Error: {error}</div>;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-10 flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur">
+    <div className="flex flex-col h-screen bg-background text-foreground">
+      <header className="shrink-0 z-10 flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur">
           {renaming ? (
             <span className="inline-flex items-center gap-2">
               <Input
@@ -441,7 +441,7 @@ export function Editor() {
           <ThemeToggle />
         </header>
 
-        <div className="p-6">
+        <div className="flex-1 min-h-0 p-6 overflow-auto">
           <ul className="tree-list">{roots.map((r) => renderNode(r, 0))}</ul>
         </div>
 

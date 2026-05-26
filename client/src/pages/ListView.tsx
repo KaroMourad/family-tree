@@ -105,8 +105,8 @@ export function ListView() {
   const peopleCount = Object.keys(byId).length;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-10 flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur">
+    <div className="flex flex-col h-screen bg-background text-foreground">
+      <header className="shrink-0 z-10 flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur">
         <h1 className="m-0 text-lg font-semibold text-primary uppercase tracking-[0.15em]">
           ◆ Family Tree
         </h1>
@@ -132,7 +132,7 @@ export function ListView() {
         <ThemeToggle />
       </header>
 
-      <div className="p-6 overflow-auto">
+      <div className="flex-1 min-h-0 p-6 overflow-auto">
         <ul className="tree-list">
           {roots.map((r) => (
             <ListNode key={r.id} node={r} collapsedAll={collapsedAll} match={matches} onSelect={setSelectedId} />

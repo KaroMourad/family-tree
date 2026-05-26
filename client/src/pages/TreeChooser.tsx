@@ -65,7 +65,7 @@ export function TreeChooser() {
 
   return (
     <div className="min-h-screen bg-background text-foreground py-12 px-5">
-      <div className="absolute top-4 right-4 flex items-center gap-3 text-xs text-muted-foreground tracking-widest">
+      <div className="fixed top-4 right-4 z-50 flex items-center gap-3 text-xs text-muted-foreground tracking-widest">
         <Link to="/" className="text-primary hover:underline">← All trees</Link>
         {user && (
           <>

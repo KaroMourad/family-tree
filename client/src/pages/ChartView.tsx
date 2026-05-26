@@ -185,8 +185,8 @@ export function ChartView() {
   const selected = selectedId ? byId[selectedId] ?? null : null;
 
   return (
-    <div className="chart min-h-screen h-screen overflow-hidden bg-background text-foreground">
-      <header className="sticky top-0 z-10 flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur">
+    <div className="chart flex flex-col h-screen overflow-hidden bg-background text-foreground">
+      <header className="shrink-0 z-10 flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur">
         <h1 className="m-0 text-lg font-semibold text-primary uppercase tracking-[0.15em]">
           ◆ Genealogical Chart
         </h1>
@@ -207,8 +207,8 @@ export function ChartView() {
         <span className="ml-auto text-xs text-muted-foreground tracking-widest">{Object.keys(byId).length} people</span>
         <ThemeToggle />
       </header>
-      <div className="svg-wrap">
-        <svg ref={svgRef} />
+      <div className="flex-1 min-h-0 relative overflow-hidden">
+        <svg ref={svgRef} className="block w-full h-full cursor-grab active:cursor-grabbing bg-background" />
       </div>
       <DetailPanel person={selected as TreeNode | null} byId={byId} onClose={() => setSelectedId(null)} />
     </div>
