@@ -1,55 +1,44 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api } from "../api/client";
-import type { Tree } from "../types";
+import { useQuery } from "@tanstack/react-query";
+import { fetchTree, queryKeys } from "../api/queries";
 import { TreeContext } from "./TreeContext";
 
 export function TreeAccessBoundary({ children }: { children: ReactNode }) {
   const { treeId } = useParams();
-  const [tree, setTree] = useState<Tree | null>(null);
-  const [status, setStatus] = useState<"loading" | "ok" | "notfound" | "error">("loading");
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const { data: tree, isPending, error } = useQuery({
+    queryKey: queryKeys.tree(treeId ?? ""),
+    queryFn: () => fetchTree(treeId!),
+    enabled: !!treeId,
+    retry: false,
+  });
 
-  useEffect(() => {
-    if (!treeId) {
-      setStatus("notfound");
-      return;
-    }
-    let cancelled = false;
-    setStatus("loading");
-    api<Tree>(`/trees/${treeId}`)
-      .then((t) => {
-        if (cancelled) return;
-        setTree(t);
-        setStatus("ok");
-      })
-      .catch((e: Error) => {
-        if (cancelled) return;
-        const msg = String(e.message ?? e);
-        // The server returns 404 for both "missing" and "no access".
-        if (msg.toLowerCase().includes("tree not found") || msg.includes("HTTP 404")) {
-          setStatus("notfound");
-        } else {
-          setErrorMsg(msg);
-          setStatus("error");
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [treeId]);
-
-  if (status === "loading") return <div style={{ padding: 40 }}>Loading…</div>;
-  if (status === "notfound") {
+  if (!treeId) {
     return (
-      <div style={{ padding: 40 }}>
+      <div className="p-10">
         <p>Tree not found or you don't have access.</p>
-        <p><Link to="/">← Back to all trees</Link></p>
+        <p><Link to="/" className="text-primary hover:underline">← Back to all trees</Link></p>
       </div>
     );
   }
-  if (status === "error") {
-    return <div className="p-10 text-destructive">Error: {errorMsg}</div>;
+
+  if (isPending) return <div className="p-10">Loading…</div>;
+
+  if (error) {
+    // The server returns 404 for both "missing" and "no access".
+    const msg = String((error as Error).message ?? error);
+    const notFound =
+      msg.toLowerCase().includes("tree not found") || msg.includes("HTTP 404");
+    if (notFound) {
+      return (
+        <div className="p-10">
+          <p>Tree not found or you don't have access.</p>
+          <p><Link to="/" className="text-primary hover:underline">← Back to all trees</Link></p>
+        </div>
+      );
+    }
+    return <div className="p-10 text-destructive">Error: {msg}</div>;
   }
-  return <TreeContext.Provider value={tree!}>{children}</TreeContext.Provider>;
+
+  return <TreeContext.Provider value={tree}>{children}</TreeContext.Provider>;
 }
