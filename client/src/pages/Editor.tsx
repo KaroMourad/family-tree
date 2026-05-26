@@ -235,7 +235,10 @@ export function Editor() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editorState, setEditorState] = useState<EditorState>(null);
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // Open-state model: same semantics as ListView. openIds holds nodes whose
+  // visible state has been explicitly toggled away from `defaultOpen`.
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+  const [defaultOpen, setDefaultOpen] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<Person | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -352,26 +355,35 @@ export function Editor() {
   }
 
   function toggleNode(id: string) {
-    setCollapsed((prev) => {
+    setOpenIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
   }
+  function expandAll() {
+    setDefaultOpen(true);
+    setOpenIds(new Set());
+  }
+  function collapseAll() {
+    setDefaultOpen(false);
+    setOpenIds(new Set());
+  }
+  const isNodeOpen = (id: string) => (openIds.has(id) ? !defaultOpen : defaultOpen);
 
   function renderNode(p: Person, depth: number): JSX.Element {
     const kids = byParent.get(p.id) ?? [];
-    const isCollapsed = collapsed.has(p.id);
+    const isOpen = isNodeOpen(p.id);
     const cls = ["card", genderClass(p.gender)];
     return (
-      <li key={p.id} className={`node${isCollapsed ? " collapsed" : ""}`}>
+      <li key={p.id} className={`node${!isOpen && kids.length > 0 ? " collapsed" : ""}`}>
         <span className={cls.join(" ")}>
           <span
             className={`toggle${kids.length === 0 ? " empty" : ""}`}
             onClick={() => kids.length > 0 && toggleNode(p.id)}
           >
-            {kids.length === 0 ? "·" : isCollapsed ? "+" : "−"}
+            {kids.length === 0 ? "·" : isOpen ? "−" : "+"}
           </span>
           <span className="name">{p.name}</span>
           {(p.birthYear || p.deathYear) && (
@@ -408,7 +420,7 @@ export function Editor() {
             </Button>
           </span>
         </span>
-        {kids.length > 0 && !isCollapsed && (
+        {kids.length > 0 && isOpen && (
           <ul>{kids.map((c) => renderNode(c, depth + 1))}</ul>
         )}
       </li>
@@ -460,6 +472,12 @@ export function Editor() {
           )}
           <Button size="sm" onClick={() => setEditorState({ mode: "create", person: emptyForm(null) })} className="uppercase tracking-widest">
             + Root person
+          </Button>
+          <Button variant="outline" size="sm" onClick={expandAll} className="uppercase tracking-widest">
+            Expand all
+          </Button>
+          <Button variant="outline" size="sm" onClick={collapseAll} className="uppercase tracking-widest">
+            Collapse all
           </Button>
           <span className="ml-auto text-xs text-muted-foreground tracking-widest">
             {people.length} people · {user?.email} ({user?.role})
