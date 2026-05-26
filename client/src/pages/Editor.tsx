@@ -23,6 +23,16 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import "../styles/views.css";
 
@@ -232,6 +242,9 @@ export function Editor() {
   const [error, setError] = useState<string | null>(null);
   const [editorState, setEditorState] = useState<EditorState>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [deleteTarget, setDeleteTarget] = useState<Person | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function saveTreeName() {
     const next = renameDraft.trim();
@@ -309,18 +322,18 @@ export function Editor() {
     await refresh();
   }
 
-  async function handleDelete(p: Person) {
-    const kids = byParent.get(p.id) ?? [];
-    const msg =
-      kids.length > 0
-        ? `Delete ${p.name}? Their ${kids.length} direct child${kids.length === 1 ? "" : "ren"} will become roots.`
-        : `Delete ${p.name}?`;
-    if (!confirm(msg)) return;
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleteBusy(true);
+    setDeleteError(null);
     try {
-      await api(`/trees/${treeId}/people/${p.id}`, { method: "DELETE" });
+      await api(`/trees/${treeId}/people/${deleteTarget.id}`, { method: "DELETE" });
+      setDeleteTarget(null);
       await refresh();
     } catch (e) {
-      alert(String((e as Error).message));
+      setDeleteError(String((e as Error).message));
+    } finally {
+      setDeleteBusy(false);
     }
   }
 
@@ -375,7 +388,7 @@ export function Editor() {
               size="sm"
               variant="ghost"
               className="h-6 px-2 text-[10px] text-destructive uppercase tracking-widest hover:bg-destructive/15"
-              onClick={() => handleDelete(p)}
+              onClick={() => { setDeleteTarget(p); setDeleteError(null); }}
             >
               Delete
             </Button>
@@ -453,6 +466,42 @@ export function Editor() {
         onCancel={() => setEditorState(null)}
         onSave={handleSave}
       />
+
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o && !deleteBusy) { setDeleteTarget(null); setDeleteError(null); } }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="uppercase tracking-widest text-destructive">
+              Delete {deleteTarget?.name}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget && (() => {
+                const kids = byParent.get(deleteTarget.id) ?? [];
+                return kids.length > 0
+                  ? `Their ${kids.length} direct child${kids.length === 1 ? "" : "ren"} will become roots. This cannot be undone.`
+                  : "This cannot be undone.";
+              })()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError && (
+            <Alert variant="destructive">
+              <AlertDescription>{deleteError}</AlertDescription>
+            </Alert>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteBusy}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); confirmDelete(); }}
+              disabled={deleteBusy}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {deleteBusy ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
