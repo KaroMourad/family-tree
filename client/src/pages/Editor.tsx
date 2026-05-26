@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import "../styles/views.css";
 
@@ -393,9 +392,8 @@ export function Editor() {
   if (error) return <div className="p-10 text-destructive">Error: {error}</div>;
 
   return (
-    <TooltipProvider>
-      <div className="min-h-screen bg-background text-foreground">
-        <header className="sticky top-0 z-10 flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur">
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-10 flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur">
           {renaming ? (
             <span className="inline-flex items-center gap-2">
               <Input
@@ -447,15 +445,14 @@ export function Editor() {
           <ul className="tree-list">{roots.map((r) => renderNode(r, 0))}</ul>
         </div>
 
-        <PersonForm
-          key={editorState ? `${editorState.mode}-${editorState.id ?? "new"}` : "closed"}
-          open={!!editorState}
-          initial={editorState?.person ?? emptyForm(null)}
-          title={editorState?.mode === "create" ? "Add person" : `Edit ${editorState?.person.name ?? ""}`}
-          onCancel={() => setEditorState(null)}
-          onSave={handleSave}
-        />
-      </div>
-    </TooltipProvider>
+      <PersonForm
+        key={editorState ? `${editorState.mode}-${editorState.id ?? "new"}` : "closed"}
+        open={!!editorState}
+        initial={editorState?.person ?? emptyForm(null)}
+        title={editorState?.mode === "create" ? "Add person" : `Edit ${editorState?.person.name ?? ""}`}
+        onCancel={() => setEditorState(null)}
+        onSave={handleSave}
+      />
+    </div>
   );
 }

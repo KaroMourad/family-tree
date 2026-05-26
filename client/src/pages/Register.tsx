@@ -83,7 +83,7 @@ export function Register() {
             </p>
             <p className="text-center text-[11px] text-muted-foreground tracking-wider">
               New accounts are viewers. An admin must promote you (run{" "}
-              <code className="rounded bg-muted px-1 py-0.5 text-foreground">pnpm create-admin you@example.com password</code>{" "}
+              <code className="rounded bg-muted px-1 py-0.5 text-foreground">pnpm create-superadmin you@example.com password</code>{" "}
               on the server) to use the editor.
             </p>
           </form>
