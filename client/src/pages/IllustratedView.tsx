@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import * as d3 from "d3";
-import { firstRoot, flattenTree, useTree } from "../hooks/useTree";
+import { usePeople } from "../hooks/usePeople";
+import { firstRoot, flattenTree, nestPeople } from "../api/nest";
+import { useUIStore } from "../store/ui";
 import { DetailPanel } from "../components/DetailPanel";
 import type { TreeNode } from "../types";
 import { Button } from "@/components/ui/button";
@@ -85,14 +87,20 @@ function computeLayout(root: TreeNode) {
 
 export function IllustratedView() {
   const { treeId } = useParams();
-  const { tree, loading, error } = useTree(treeId);
+  const { data: people, isPending: loading, error } = usePeople(treeId);
+  const tree = useMemo(() => (people ? nestPeople(people) : null), [people]);
   const root = firstRoot(tree);
   const byId = useMemo(() => flattenTree(tree), [tree]);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const gRef = useRef<SVGGElement | null>(null);
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [q, setQ] = useState("");
+  const setSelectedId = useUIStore((s) => s.setSelectedPerson);
+  const q = useUIStore((s) => s.searchQuery);
+  const setQ = useUIStore((s) => s.setSearchQuery);
+
+  useEffect(() => {
+    setSelectedId(null);
+  }, [treeId, setSelectedId]);
 
   const layout = useMemo(() => (root ? computeLayout(root) : null), [root]);
 
@@ -218,7 +226,7 @@ export function IllustratedView() {
   }
 
   if (loading) return <div className="p-10">Loading…</div>;
-  if (error) return <div className="p-10 text-destructive">Error: {error}</div>;
+  if (error) return <div className="p-10 text-destructive">Error: {error.message}</div>;
   if (Array.isArray(tree) && tree.length === 0) {
     return (
       <div className="p-10">
@@ -229,7 +237,6 @@ export function IllustratedView() {
   }
   if (!root) return <div className="p-10">No data.</div>;
 
-  const selected = selectedId ? byId[selectedId] ?? null : null;
 
   return (
     <div className="compact flex flex-col h-screen overflow-hidden bg-background text-foreground">
@@ -256,7 +263,7 @@ export function IllustratedView() {
       <div className="flex-1 min-h-0 relative overflow-hidden">
         <svg ref={svgRef} className="block w-full h-full cursor-grab active:cursor-grabbing bg-background" />
       </div>
-      <DetailPanel person={selected as TreeNode | null} byId={byId} onClose={() => setSelectedId(null)} />
+      <DetailPanel />
     </div>
   );
 }

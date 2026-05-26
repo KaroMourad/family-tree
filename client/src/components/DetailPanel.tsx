@@ -1,4 +1,9 @@
-import type { Person, TreeNode } from "../types";
+import { useMemo } from "react";
+import { useParams } from "react-router-dom";
+import { usePeople } from "../hooks/usePeople";
+import { useUIStore } from "../store/ui";
+import { flattenTree, nestPeople } from "../api/nest";
+import type { TreeNode } from "../types";
 import {
   Sheet,
   SheetContent,
@@ -6,12 +11,6 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
-
-type Props = {
-  person: (Person | TreeNode) | null;
-  byId: Record<string, (Person | TreeNode) & { childIds?: string[] }>;
-  onClose: () => void;
-};
 
 function Row({ label, value }: { label: string; value: unknown }) {
   if (value == null || value === "") return null;
@@ -23,10 +22,21 @@ function Row({ label, value }: { label: string; value: unknown }) {
   );
 }
 
-export function DetailPanel({ person, byId, onClose }: Props) {
+export function DetailPanel() {
+  const { treeId } = useParams();
+  const { data: people } = usePeople(treeId);
+  const selectedId = useUIStore((s) => s.selectedPersonId);
+  const setSelectedId = useUIStore((s) => s.setSelectedPerson);
+
+  const byId = useMemo(
+    () => (people ? flattenTree(nestPeople(people)) : {}),
+    [people],
+  );
+  const person = selectedId ? (byId[selectedId] as TreeNode | undefined) ?? null : null;
   const open = !!person;
+
   return (
-    <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Sheet open={open} onOpenChange={(o) => { if (!o) setSelectedId(null); }}>
       <SheetContent side="right" className="w-[360px] sm:max-w-[360px]">
         {person && (
           <>
@@ -75,11 +85,7 @@ export function DetailPanel({ person, byId, onClose }: Props) {
               />
               <Row
                 label="Children"
-                value={
-                  "children" in person && Array.isArray((person as TreeNode).children)
-                    ? (person as TreeNode).children.map((c) => c.name).join(", ")
-                    : ""
-                }
+                value={person.children?.map((c) => c.name).join(", ") ?? ""}
               />
               <Row label="Profession" value={person.profession} />
               <Row label="Notes" value={person.bio} />

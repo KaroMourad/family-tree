@@ -1,9 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { useTreeContext } from "../tree/TreeContext";
-import type { Person, Tree } from "../types";
+import type { Person } from "../types";
+import { usePeople } from "../hooks/usePeople";
+import {
+  useCreatePerson,
+  useUpdatePerson,
+  useDeletePerson,
+  useDeleteTree,
+  useRenameTree,
+} from "../hooks/useTreeMutations";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -231,9 +238,12 @@ export function Editor() {
   const [renameDraft, setRenameDraft] = useState(contextTree.name);
   const [renameBusy, setRenameBusy] = useState(false);
   const [renameError, setRenameError] = useState<string | null>(null);
-  const [people, setPeople] = useState<Person[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: people = [], isPending: loading, error } = usePeople(treeId);
+  const createPersonMutation = useCreatePerson(treeId!);
+  const updatePersonMutation = useUpdatePerson(treeId!);
+  const deletePersonMutation = useDeletePerson(treeId!);
+  const renameTreeMutation = useRenameTree(treeId!);
+  const deleteTreeMutation = useDeleteTree();
   const [editorState, setEditorState] = useState<EditorState>(null);
   // Open-state model: same semantics as ListView. openIds holds nodes whose
   // visible state has been explicitly toggled away from `defaultOpen`.
@@ -255,7 +265,7 @@ export function Editor() {
     setDeleteTreeBusy(true);
     setDeleteTreeError(null);
     try {
-      await api(`/trees/${treeId}`, { method: "DELETE" });
+      await deleteTreeMutation.mutateAsync(treeId!);
       navigate("/");
     } catch (e) {
       setDeleteTreeError(String((e as Error).message));
@@ -276,10 +286,7 @@ export function Editor() {
     setRenameBusy(true);
     setRenameError(null);
     try {
-      const updated = await api<Tree>(`/trees/${treeId}`, {
-        method: "PUT",
-        body: JSON.stringify({ name: next }),
-      });
+      const updated = await renameTreeMutation.mutateAsync(next);
       setTreeName(updated.name);
       setRenaming(false);
     } catch (e) {
@@ -295,22 +302,6 @@ export function Editor() {
     setRenaming(false);
   }
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const list = await api<Person[]>(`/trees/${treeId}/people`);
-      setPeople(list);
-    } catch (e) {
-      setError(String((e as Error).message));
-    } finally {
-      setLoading(false);
-    }
-  }, [treeId]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
   const { roots, byParent } = useMemo(() => {
     const byParent = new Map<string | null, Person[]>();
     for (const p of people) {
@@ -323,20 +314,12 @@ export function Editor() {
 
   async function handleSave(data: FormState) {
     const { id: _omit, ...rest } = data as Record<string, unknown> as any;
-    const payload = rest;
     if (editorState?.mode === "edit") {
-      await api<Person>(`/trees/${treeId}/people/${editorState.id}`, {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      });
+      await updatePersonMutation.mutateAsync({ id: editorState.id!, patch: rest });
     } else {
-      await api<Person>(`/trees/${treeId}/people`, {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
+      await createPersonMutation.mutateAsync(rest);
     }
     setEditorState(null);
-    await refresh();
   }
 
   async function confirmDelete() {
@@ -344,9 +327,8 @@ export function Editor() {
     setDeleteBusy(true);
     setDeleteError(null);
     try {
-      await api(`/trees/${treeId}/people/${deleteTarget.id}`, { method: "DELETE" });
+      await deletePersonMutation.mutateAsync(deleteTarget.id);
       setDeleteTarget(null);
-      await refresh();
     } catch (e) {
       setDeleteError(String((e as Error).message));
     } finally {
@@ -428,7 +410,7 @@ export function Editor() {
   }
 
   if (loading) return <div className="p-10">Loading…</div>;
-  if (error) return <div className="p-10 text-destructive">Error: {error}</div>;
+  if (error) return <div className="p-10 text-destructive">Error: {error.message}</div>;
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">

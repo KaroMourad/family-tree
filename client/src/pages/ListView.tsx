@@ -1,6 +1,8 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { allRoots, flattenTree, useTree } from "../hooks/useTree";
+import { usePeople } from "../hooks/usePeople";
+import { allRoots, flattenTree, nestPeople } from "../api/nest";
+import { useUIStore } from "../store/ui";
 import { DetailPanel } from "../components/DetailPanel";
 import type { TreeNode } from "../types";
 import { Button } from "@/components/ui/button";
@@ -80,9 +82,15 @@ function ListNode({ node, isOpen, match, isOpenFor, onSelect, onToggle }: NodePr
 
 export function ListView() {
   const { treeId } = useParams();
-  const { tree, loading, error } = useTree(treeId);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [q, setQ] = useState("");
+  const { data: people, isPending: loading, error } = usePeople(treeId);
+  const tree = useMemo(() => (people ? nestPeople(people) : null), [people]);
+  const setSelectedId = useUIStore((s) => s.setSelectedPerson);
+  const q = useUIStore((s) => s.searchQuery);
+  const setQ = useUIStore((s) => s.setSearchQuery);
+
+  useEffect(() => {
+    setSelectedId(null);
+  }, [treeId, setSelectedId]);
   // Set of node IDs that are explicitly open. Default behaviour (when an id is
   // NOT in the set) is controlled by `defaultOpen`. Expand-all → defaultOpen=true,
   // open set cleared. Collapse-all → defaultOpen=false, open set cleared. Per-node
@@ -129,7 +137,7 @@ export function ListView() {
   }, [q, byId]);
 
   if (loading) return <div className="p-10">Loading…</div>;
-  if (error) return <div className="p-10 text-destructive">Error: {error}</div>;
+  if (error) return <div className="p-10 text-destructive">Error: {error.message}</div>;
   if (Array.isArray(tree) && tree.length === 0) {
     return (
       <div className="p-10">
@@ -139,7 +147,6 @@ export function ListView() {
     );
   }
 
-  const selected = selectedId ? byId[selectedId] ?? null : null;
   const peopleCount = Object.keys(byId).length;
 
   return (
@@ -186,7 +193,7 @@ export function ListView() {
         </ul>
       </div>
 
-      <DetailPanel person={selected as TreeNode | null} byId={byId} onClose={() => setSelectedId(null)} />
+      <DetailPanel />
     </div>
   );
 }
