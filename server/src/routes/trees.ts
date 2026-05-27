@@ -183,7 +183,7 @@ router.get("/:treeId/export", requireTreeAccess, async (req, res) => {
   const treeId = req.tree!.id;
   const all = await prisma.person.findMany({
     where: { treeId },
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    orderBy: [{ parentId: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
   });
 
   const nodes = new Map<string, PersonNode>();
@@ -210,6 +210,7 @@ router.get("/:treeId/export", requireTreeAccess, async (req, res) => {
       partnerName: p.partnerName,
       profession: p.profession,
       bio: p.bio,
+      sortOrder: p.sortOrder,
       children: [],
     });
   }

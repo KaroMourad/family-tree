@@ -280,14 +280,23 @@ export function Editor() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
+      let doc: { formatVersion?: unknown; people?: unknown[] };
       try {
-        const doc = JSON.parse(String(reader.result)) as { people?: unknown[] };
-        const count = Array.isArray(doc?.people) ? countNodes(doc.people as Array<{ children?: unknown[] }>) : 0;
-        setPendingImport({ doc, count });
+        doc = JSON.parse(String(reader.result));
       } catch {
         setImportError("That file isn't valid JSON.");
         toast.error("That file isn't valid JSON.");
+        return;
       }
+      // Validate the document shape before offering a destructive replace, so
+      // the confirm count is meaningful and matches what the server accepts.
+      if (doc?.formatVersion !== 1 || !Array.isArray(doc.people)) {
+        setImportError("That file isn't a family-tree export (expected formatVersion 1 with a people array).");
+        toast.error("That file isn't a family-tree export.");
+        return;
+      }
+      const count = countNodes(doc.people as Array<{ children?: unknown[] }>);
+      setPendingImport({ doc, count });
     };
     reader.readAsText(file);
   }

@@ -27,6 +27,7 @@ const personNodeBase = {
   partnerName: z.string().nullable().optional(),
   profession: z.string().nullable().optional(),
   bio: z.string().nullable().optional(),
+  sortOrder: z.number().int().optional(),
 };
 
 export type PersonNode = PersonNodeShape;
@@ -59,6 +60,7 @@ type PersonNodeShape = {
   partnerName?: string | null;
   profession?: string | null;
   bio?: string | null;
+  sortOrder?: number;
   children?: PersonNodeShape[];
 };
 
@@ -109,7 +111,9 @@ export function flattenDocument(doc: TreeDocument, treeId: string): PersonCreate
       bio: node.bio ?? null,
       parentId,
       parentTreeId: parentId == null ? null : treeId,
-      sortOrder,
+      // Prefer the document's own sortOrder (faithful round-trip); fall back to
+      // sibling array index for documents that omit it (e.g. the legacy seed).
+      sortOrder: node.sortOrder ?? sortOrder,
     });
     (node.children ?? []).forEach((c, i) => walk(c, node.id, i));
   }
