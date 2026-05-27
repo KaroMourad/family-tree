@@ -2,6 +2,13 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { requireAuth, requireTreeAccess } from "../auth.js";
+import {
+  treeDocumentSchema,
+  flattenDocument,
+  replaceTreePeople,
+  type TreeDocument,
+  type PersonNode,
+} from "../lib/treeIO.js";
 
 const router = Router();
 
@@ -168,6 +175,85 @@ router.delete("/:treeId/people/:id", requireTreeAccess, async (req, res) => {
   } catch {
     res.status(404).json({ error: "Not found" });
   }
+});
+
+// --- /api/trees/:treeId/export ---------------------------------------------
+
+router.get("/:treeId/export", requireTreeAccess, async (req, res) => {
+  const treeId = req.tree!.id;
+  const all = await prisma.person.findMany({
+    where: { treeId },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+
+  const nodes = new Map<string, PersonNode>();
+  for (const p of all) {
+    nodes.set(p.id, {
+      id: p.id,
+      name: p.name,
+      nickname: p.nickname,
+      surnameNow: p.surnameNow,
+      surnameBirth: p.surnameBirth,
+      gender: p.gender,
+      deceased: p.deceased,
+      fatherId: p.fatherId,
+      fatherName: p.fatherName,
+      motherId: p.motherId,
+      motherName: p.motherName,
+      birthYear: p.birthYear,
+      birthMonth: p.birthMonth,
+      birthDay: p.birthDay,
+      deathYear: p.deathYear,
+      birthPlace: p.birthPlace,
+      deathPlace: p.deathPlace,
+      partnerId: p.partnerId,
+      partnerName: p.partnerName,
+      profession: p.profession,
+      bio: p.bio,
+      children: [],
+    });
+  }
+  const roots: PersonNode[] = [];
+  for (const p of all) {
+    const node = nodes.get(p.id)!;
+    if (p.parentId && nodes.has(p.parentId)) {
+      nodes.get(p.parentId)!.children!.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+
+  const doc: TreeDocument = {
+    formatVersion: 1,
+    tree: { name: req.tree!.name },
+    people: roots,
+  };
+
+  const safeName = req.tree!.name.replace(/[^\w.-]+/g, "_").slice(0, 60) || "tree";
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Content-Disposition", `attachment; filename="${safeName}.json"`);
+  res.send(JSON.stringify(doc, null, 2));
+});
+
+// --- /api/trees/:treeId/import ---------------------------------------------
+
+router.post("/:treeId/import", requireTreeAccess, async (req, res) => {
+  const parsed = treeDocumentSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.flatten() });
+  }
+  const doc = parsed.data;
+  const treeId = req.tree!.id;
+
+  let rows;
+  try {
+    rows = flattenDocument(doc, treeId);
+  } catch (e) {
+    return res.status(400).json({ error: (e as Error).message });
+  }
+
+  const inserted = await replaceTreePeople(treeId, doc.tree.name, rows);
+  res.json({ imported: inserted, name: doc.tree.name });
 });
 
 // --- /api/trees/:treeId/tree (nested-tree render) --------------------------
