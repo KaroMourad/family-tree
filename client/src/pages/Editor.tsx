@@ -12,7 +12,7 @@ import {
   useRenameTree,
   useImportTree,
 } from "../hooks/useTreeMutations";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -543,21 +543,27 @@ export function Editor() {
             + Root person
           </Button>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="uppercase tracking-widest">
-                View <ChevronDown className="h-4 w-4" />
-              </Button>
+            <DropdownMenuTrigger
+              className={buttonVariants({ variant: "outline", size: "sm", className: "uppercase tracking-widest" })}
+            >
+              View <ChevronDown className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              <DropdownMenuItem onSelect={expandAll}>Expand all</DropdownMenuItem>
-              <DropdownMenuItem onSelect={collapseAll}>Collapse all</DropdownMenuItem>
+              {/* preventDefault keeps the View menu open so the user can toggle
+                  expand/collapse repeatedly; they close it with Esc or click-away. */}
+              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); expandAll(); }}>
+                Expand all
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); collapseAll(); }}>
+                Collapse all
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="uppercase tracking-widest">
-                Manage <ChevronDown className="h-4 w-4" />
-              </Button>
+            <DropdownMenuTrigger
+              className={buttonVariants({ variant: "outline", size: "sm", className: "uppercase tracking-widest" })}
+            >
+              Manage <ChevronDown className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
               <DropdownMenuItem onSelect={handleExport}>Export JSON</DropdownMenuItem>
