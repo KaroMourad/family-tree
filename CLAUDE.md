@@ -65,12 +65,24 @@ The `Person` table is flat with a self-referential `parentId` FK and a per-sibli
 
 - `GET /api/trees/:treeId/people` — flat list of people in the tree, ordered by `(parentId, sortOrder)`. The editor uses this.
 - `GET /api/trees/:treeId/tree` — server assembles a nested tree in one pass (`server/src/routes/tree.ts`) and returns a single object if there's exactly one root, otherwise an array. Viewer routes use this.
+- `GET /api/trees/:treeId/export` — returns the tree as a single camelCase JSON
+  document `{ formatVersion: 1, tree: { name }, people: [...] }` where `people`
+  is the nested form (each node has a `children` array). Sent as a file download.
+- `POST /api/trees/:treeId/import` — accepts that same document and **destructively
+  replaces** the tree's people in one transaction (BFS insert, parent before child),
+  preserving the ids in the file and renaming the tree to `tree.name`. Rejects
+  documents with duplicate ids (400) without touching the tree.
+
+The export/import document is the **canonical interchange format** (camelCase). The
+shared logic lives in `server/src/lib/treeIO.ts` and is reused by the `import-json`
+CLI. `legacy/family_tree.json` is stored in this camelCase shape.
 
 `Person.id` is a custom 5-char base36 string, **not** a CUID — `server/src/routes/people.ts` generates it on POST and retries on collision **per tree** (composite uniqueness check `(treeId, id)`). When importing from `legacy/family_tree.json`, the original string IDs are preserved verbatim.
 
 ### Import semantics (important if you re-seed)
 
-`server/scripts/import-json.ts` does **destructive** re-imports into a specific tree: it deletes every `Person` row for that tree only, then inserts BFS-by-layer so that parent FKs always resolve before children. Other trees are untouched. It does not touch the `User` or `Tree` tables. Two invocation forms:
+`server/scripts/import-json.ts` does **destructive** re-imports into a specific tree: it deletes every `Person` row for that tree only, then inserts BFS-by-layer so that parent FKs always resolve before children. Other trees are untouched. It does not touch the `User` or `Tree` tables. The CLI and the in-app import share `server/src/lib/treeIO.ts`; `legacy/family_tree.json`
+uses the canonical camelCase keys (not the original snake_case). Two invocation forms:
 
 - `pnpm import-json --tree <treeId>` — import into an existing tree.
 - `pnpm import-json --owner <email> --name "<tree name>"` — create a new tree with that owner and name, then import into it.
@@ -82,3 +94,21 @@ When deleting a person via `DELETE /api/trees/:treeId/people/:id`, Prisma's `onD
 ## User preferences
 
 Per stored memory: prefer `pnpm` over `npm`/`yarn` across all projects; follow the existing lockfile when one exists. This repo's lockfile is `pnpm-lock.yaml`.
+
+## Deployment (free tier)
+
+The app deploys to **Render** (frontend static site + Express web service) with a
+**Neon** Postgres database — chosen because Neon's free Postgres persists data
+through idle (Render's free Postgres expires after 30 days). See
+`docs/superpowers/specs/2026-05-27-deploy-and-json-export-import-design.md`.
+
+- `render.yaml` (repo root) defines both services. Pushes to `main` redeploy.
+- Set on the **web service**: `DATABASE_URL` (Neon string with `?sslmode=require`),
+  `CLIENT_ORIGIN` (the static site URL). `JWT_SECRET` is auto-generated; `PORT` is set.
+- Set on the **static site**: `VITE_API_URL` (the web service URL). Baked in at build.
+- The web service runs `prisma migrate deploy` on each release (`pnpm prisma:deploy`).
+- Seed a fresh DB by running `create-superadmin` then `import-json` against the Neon
+  `DATABASE_URL` (superadmin must exist before migrate on a brand-new DB).
+- **Backup:** use the in-app Export (download JSON) as the primary backup; `pg_dump`
+  against the Neon URL is the whole-DB fallback.
+- The free web service sleeps after 15 min idle (~30–50s cold start on next request).
