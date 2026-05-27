@@ -1,0 +1,35 @@
+# Render blueprint: static SPA + Express API.
+# Database: Neon Postgres (created separately; its connection string is set as
+# the DATABASE_URL env var on the web service via the Render dashboard).
+services:
+  - type: web
+    name: family-tree-api
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm prisma:generate && pnpm build
+    startCommand: pnpm prisma:deploy && pnpm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false        # set in dashboard to the Neon connection string (?sslmode=require)
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CLIENT_ORIGIN
+        sync: false        # set to the static site URL once known
+      - key: PORT
+        value: 10000
+
+  - type: web
+    name: family-tree-web
+    runtime: static
+    rootDir: client
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false        # set to the family-tree-api URL once known
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
