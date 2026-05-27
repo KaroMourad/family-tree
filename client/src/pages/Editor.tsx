@@ -354,6 +354,11 @@ export function Editor() {
   }
   const isNodeOpen = (id: string) => (openIds.has(id) ? !defaultOpen : defaultOpen);
 
+  function countDescendants(id: string): number {
+    const kids = byParent.get(id) ?? [];
+    return kids.reduce((sum, c) => sum + 1 + countDescendants(c.id), 0);
+  }
+
   function renderNode(p: Person, depth: number): JSX.Element {
     const kids = byParent.get(p.id) ?? [];
     const isOpen = isNodeOpen(p.id);
@@ -374,6 +379,15 @@ export function Editor() {
             </span>
           )}
           <span className="id-tag">#{p.id}</span>
+          {kids.length > 0 && (
+            <span className="children-count">{kids.length}</span>
+          )}
+          {(() => {
+            const total = kids.length > 0 ? countDescendants(p.id) : 0;
+            return total > kids.length ? (
+              <span className="children-count descendants-count">{total}</span>
+            ) : null;
+          })()}
           <span className="inline-flex items-center gap-1 ml-2">
             <Button
               size="sm"
