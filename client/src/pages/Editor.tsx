@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useTreeContext } from "../tree/TreeContext";
@@ -10,6 +10,7 @@ import {
   useDeletePerson,
   useDeleteTree,
   useRenameTree,
+  useImportTree,
 } from "../hooks/useTreeMutations";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,6 +48,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { toast } from "sonner";
 import "../styles/views.css";
 
 function genderClass(g?: string | null) {
@@ -55,6 +57,13 @@ function genderClass(g?: string | null) {
   if (s.startsWith("m")) return "male";
   if (s.startsWith("f") || s.startsWith("w")) return "female";
   return "";
+}
+
+function countNodes(nodes: Array<{ children?: unknown[] }>): number {
+  return nodes.reduce(
+    (sum, n) => sum + 1 + (Array.isArray(n.children) ? countNodes(n.children as Array<{ children?: unknown[] }>) : 0),
+    0,
+  );
 }
 
 type FormState = Partial<Person> & { name: string };
@@ -244,6 +253,54 @@ export function Editor() {
   const deletePersonMutation = useDeletePerson(treeId!);
   const renameTreeMutation = useRenameTree(treeId!);
   const deleteTreeMutation = useDeleteTree();
+  const importTreeMutation = useImportTree(treeId!);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingImport, setPendingImport] = useState<{ doc: unknown; count: number } | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  async function handleExport() {
+    try {
+      const doc = await (await import("../api/queries")).exportTree(treeId!);
+      const blob = new Blob([JSON.stringify(doc, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${treeName.replace(/[^\w.-]+/g, "_") || "tree"}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error(`Couldn't export: ${(e as Error).message}`);
+    }
+  }
+
+  function onImportFileChosen(e: React.ChangeEvent<HTMLInputElement>) {
+    setImportError(null);
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file later
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const doc = JSON.parse(String(reader.result)) as { people?: unknown[] };
+        const count = Array.isArray(doc?.people) ? countNodes(doc.people as Array<{ children?: unknown[] }>) : 0;
+        setPendingImport({ doc, count });
+      } catch {
+        setImportError("That file isn't valid JSON.");
+        toast.error("That file isn't valid JSON.");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  async function confirmImport() {
+    if (!pendingImport) return;
+    try {
+      await importTreeMutation.mutateAsync(pendingImport.doc);
+      setPendingImport(null);
+    } catch {
+      // toast handled in hook; keep dialog open so the user can retry/cancel
+    }
+  }
   const [editorState, setEditorState] = useState<EditorState>(null);
   // Open-state model: same semantics as ListView. openIds holds nodes whose
   // visible state has been explicitly toggled away from `defaultOpen`.
@@ -475,6 +532,24 @@ export function Editor() {
           <Button variant="outline" size="sm" onClick={collapseAll} className="uppercase tracking-widest">
             Collapse all
           </Button>
+          <Button variant="outline" size="sm" onClick={handleExport} className="uppercase tracking-widest">
+            Export JSON
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            className="uppercase tracking-widest"
+          >
+            Import JSON
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={onImportFileChosen}
+          />
           <span className="ml-auto text-xs text-muted-foreground tracking-widest">
             {people.length} people · {user?.email} ({user?.role})
           </span>
@@ -589,6 +664,38 @@ export function Editor() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={!!pendingImport}
+        onOpenChange={(o) => { if (!o && !importTreeMutation.isPending) { setPendingImport(null); setImportError(null); } }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="uppercase tracking-widest text-destructive">
+              Replace this tree?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will replace all {people.length} people in "{treeName}" with{" "}
+              {pendingImport?.count ?? 0} people from the file. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {importError && (
+            <Alert variant="destructive">
+              <AlertDescription>{importError}</AlertDescription>
+            </Alert>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={importTreeMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); confirmImport(); }}
+              disabled={importTreeMutation.isPending}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {importTreeMutation.isPending ? "Importing…" : "Replace"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
