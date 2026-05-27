@@ -31,6 +31,13 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Collapsible,
@@ -535,23 +542,37 @@ export function Editor() {
           <Button size="sm" onClick={() => setEditorState({ mode: "create", person: emptyForm(null) })} className="uppercase tracking-widest">
             + Root person
           </Button>
-          <Button variant="outline" size="sm" onClick={expandAll} className="uppercase tracking-widest">
-            Expand all
-          </Button>
-          <Button variant="outline" size="sm" onClick={collapseAll} className="uppercase tracking-widest">
-            Collapse all
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleExport} className="uppercase tracking-widest">
-            Export JSON
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            className="uppercase tracking-widest"
-          >
-            Import JSON
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="uppercase tracking-widest">
+                View <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onSelect={expandAll}>Expand all</DropdownMenuItem>
+              <DropdownMenuItem onSelect={collapseAll}>Collapse all</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="uppercase tracking-widest">
+                Manage <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onSelect={handleExport}>Export JSON</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => fileInputRef.current?.click()}>
+                Import JSON
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                onSelect={() => { setDeleteTreeOpen(true); setDeleteTreeName(""); setDeleteTreeError(null); }}
+              >
+                Delete tree
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <input
             ref={fileInputRef}
             type="file"
@@ -562,14 +583,6 @@ export function Editor() {
           <span className="ml-auto text-xs text-muted-foreground tracking-widest">
             {people.length} people · {user?.email} ({user?.role})
           </span>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => { setDeleteTreeOpen(true); setDeleteTreeName(""); setDeleteTreeError(null); }}
-            className="uppercase tracking-widest text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
-          >
-            Delete tree
-          </Button>
           <Button size="sm" variant="outline" onClick={logout}>Logout</Button>
           <ThemeToggle />
         </header>
