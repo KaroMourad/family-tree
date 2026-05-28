@@ -6,6 +6,7 @@ import { useUIStore } from "../store/ui";
 import { DetailPanel } from "../components/DetailPanel";
 import { TreeSubHeaderSlot } from "../components/TreeSubHeaderSlot";
 import { useMatchNav, useRegisterMatchNav } from "../components/MatchNav";
+import { SearchField } from "../components/SearchField";
 import type { TreeNode } from "../types";
 import { Button } from "@/components/ui/button";
 import "../styles/views.css";
@@ -183,6 +184,7 @@ export function ListView() {
   return (
     <>
       <TreeSubHeaderSlot name="actions">
+        <SearchField />
         <Button
           variant="outline"
           size="sm"

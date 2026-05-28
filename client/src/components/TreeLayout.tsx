@@ -1,17 +1,15 @@
 import { Link, Outlet, useMatch, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ChevronDown, ChevronRight, ChevronUp, Search, X } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { useTreeContext } from "../tree/TreeContext";
 import { usePeople } from "../hooks/usePeople";
-import { useUIStore } from "../store/ui";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   TreeSubHeaderSlotProvider,
   useTreeSubHeaderSlots,
 } from "./TreeSubHeaderSlot";
-import { MatchNavProvider, useMatchNav } from "./MatchNav";
+import { MatchNavProvider } from "./MatchNav";
 
 /**
  * Shared chrome for every tree-scoped route. Renders two rows:
@@ -27,8 +25,6 @@ export function TreeLayout() {
   const { user, logout } = useAuth();
   const tree = useTreeContext();
   const { data: people = [] } = usePeople(treeId);
-  const q = useUIStore((s) => s.searchQuery);
-  const setQ = useUIStore((s) => s.setSearchQuery);
   const [slots, setSlot] = useTreeSubHeaderSlots();
 
   // The chooser route (/tree/:treeId, no extra segment) is a landing page;
@@ -47,12 +43,7 @@ export function TreeLayout() {
               treeName={tree.name}
               viewLabel={isChooser ? null : viewLabel}
             />
-            {!isChooser && <SearchField q={q} setQ={setQ} className="ml-auto" />}
-            <span
-              className={`hidden md:inline text-xs text-muted-foreground tracking-widest truncate ${
-                isChooser ? "ml-auto" : ""
-              }`}
-            >
+            <span className="ml-auto hidden md:inline text-xs text-muted-foreground tracking-widest truncate">
               {people.length} people
               <span className="hidden lg:inline">
                 {" "}
@@ -63,7 +54,7 @@ export function TreeLayout() {
               size="sm"
               variant="outline"
               onClick={logout}
-              className={isChooser ? "md:ml-0 ml-auto" : ""}
+              className="md:ml-0 ml-auto"
             >
               Logout
             </Button>
@@ -169,69 +160,3 @@ function TreeSubHeaderRow({
   );
 }
 
-function SearchField({
-  q,
-  setQ,
-  className,
-}: {
-  q: string;
-  setQ: (s: string) => void;
-  className?: string;
-}) {
-  const { total, currentIndex, goPrev, goNext } = useMatchNav();
-  return (
-    <div className={`relative flex-1 max-w-sm min-w-0 ${className ?? ""}`}>
-      <Search className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-      <Input
-        type="text"
-        placeholder="Search by name or ID…"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            if (e.shiftKey) goPrev();
-            else goNext();
-          } else if (e.key === "Escape" && q) {
-            e.preventDefault();
-            setQ("");
-          }
-        }}
-        className={`pl-8 h-8 ${q ? "pr-28" : "pr-3"}`}
-      />
-      {q && (
-        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-          <span className="px-1 text-[10px] tabular-nums text-muted-foreground tracking-widest">
-            {total === 0 ? "no match" : `${currentIndex + 1} / ${total}`}
-          </span>
-          <button
-            type="button"
-            aria-label="Previous match"
-            onClick={goPrev}
-            disabled={total === 0}
-            className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-40 disabled:hover:bg-transparent"
-          >
-            <ChevronUp className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            aria-label="Next match"
-            onClick={goNext}
-            disabled={total === 0}
-            className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-40 disabled:hover:bg-transparent"
-          >
-            <ChevronDown className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            aria-label="Clear search"
-            onClick={() => setQ("")}
-            className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}

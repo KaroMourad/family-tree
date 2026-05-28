@@ -66,6 +66,7 @@ import {
 import { DetailPanel } from "@/components/DetailPanel";
 import { TreeSubHeaderSlot } from "@/components/TreeSubHeaderSlot";
 import { useMatchNav, useRegisterMatchNav } from "@/components/MatchNav";
+import { SearchField } from "@/components/SearchField";
 import { toast } from "sonner";
 import "../styles/views.css";
 
@@ -750,6 +751,7 @@ export function Editor() {
         )}
       </TreeSubHeaderSlot>
       <TreeSubHeaderSlot name="actions">
+        <SearchField />
         {/* ⋯ actions menu */}
         <DropdownMenu>
           <DropdownMenuTrigger
