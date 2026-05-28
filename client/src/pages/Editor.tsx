@@ -38,6 +38,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Collapsible,
@@ -552,6 +553,7 @@ export function Editor() {
           <Button size="sm" onClick={() => setEditorState({ mode: "create", person: emptyForm(null) })} className="ml-auto uppercase tracking-widest">
             + Root person
           </Button>
+          <Separator orientation="vertical" className="h-6 mx-1" />
           <Button variant="ghost" size="sm" onClick={expandAll} className="uppercase tracking-widest">
             <Maximize2 /> Expand all
           </Button>
