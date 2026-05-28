@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { RequireAuth } from "./auth/RequireAuth";
 import { TreeAccessBoundary } from "./tree/TreeAccessBoundary";
+import { TreeLayout } from "./components/TreeLayout";
 import { TreeList } from "./pages/TreeList";
 import { TreeChooser } from "./pages/TreeChooser";
 import { ListView } from "./pages/ListView";
@@ -16,67 +17,32 @@ export function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/" element={<RequireAuth><TreeList /></RequireAuth>} />
+      <Route
+        path="/"
+        element={
+          <RequireAuth>
+            <TreeList />
+          </RequireAuth>
+        }
+      />
+      {/* All tree-scoped routes share auth + boundary + chrome via TreeLayout. */}
       <Route
         path="/tree/:treeId"
         element={
           <RequireAuth>
             <TreeAccessBoundary>
-              <TreeChooser />
+              <TreeLayout />
             </TreeAccessBoundary>
           </RequireAuth>
         }
-      />
-      <Route
-        path="/tree/:treeId/list"
-        element={
-          <RequireAuth>
-            <TreeAccessBoundary>
-              <ListView />
-            </TreeAccessBoundary>
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/tree/:treeId/chart"
-        element={
-          <RequireAuth>
-            <TreeAccessBoundary>
-              <ChartView />
-            </TreeAccessBoundary>
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/tree/:treeId/illustrated"
-        element={
-          <RequireAuth>
-            <TreeAccessBoundary>
-              <IllustratedView />
-            </TreeAccessBoundary>
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/tree/:treeId/compact"
-        element={
-          <RequireAuth>
-            <TreeAccessBoundary>
-              <CompactView />
-            </TreeAccessBoundary>
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/tree/:treeId/editor"
-        element={
-          <RequireAuth>
-            <TreeAccessBoundary>
-              <Editor />
-            </TreeAccessBoundary>
-          </RequireAuth>
-        }
-      />
+      >
+        <Route index element={<TreeChooser />} />
+        <Route path="list" element={<ListView />} />
+        <Route path="chart" element={<ChartView />} />
+        <Route path="illustrated" element={<IllustratedView />} />
+        <Route path="compact" element={<CompactView />} />
+        <Route path="editor" element={<Editor />} />
+      </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

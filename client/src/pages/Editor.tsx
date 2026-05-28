@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext";
+import { useNavigate, useParams } from "react-router-dom";
 import { useTreeContext } from "../tree/TreeContext";
 import type { Person } from "../types";
 import { usePeople } from "../hooks/usePeople";
@@ -37,11 +36,9 @@ import {
   Maximize2,
   Minimize2,
   MoreHorizontal,
-  Search,
   Trash2,
   Upload,
   UserPlus,
-  X,
 } from "lucide-react";
 import { useUIStore } from "../store/ui";
 import {
@@ -67,8 +64,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { DetailPanel } from "@/components/DetailPanel";
+import { TreeSubHeaderSlot } from "@/components/TreeSubHeaderSlot";
 import { toast } from "sonner";
 import "../styles/views.css";
 
@@ -345,7 +342,6 @@ type EditorState = {
 export function Editor() {
   const { treeId } = useParams();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
   const contextTree = useTreeContext();
   const [treeName, setTreeName] = useState(contextTree.name);
   const [renaming, setRenaming] = useState(false);
@@ -725,205 +721,155 @@ export function Editor() {
     return <div className="p-10 text-destructive">Error: {error.message}</div>;
 
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground">
-      <div className="shrink-0 z-10 border-b border-border bg-background/90 backdrop-blur">
-        {/* Row 1 — app/nav header */}
-        <header className="flex flex-wrap items-center gap-3 px-4 sm:px-6 py-3">
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className="uppercase tracking-widest"
-          >
-            <Link to={`/tree/${treeId}`}>← Views</Link>
-          </Button>
-          <span className="ml-auto text-xs text-muted-foreground tracking-widest truncate">
-            {people.length} people
-            <span className="hidden sm:inline">
-              {" "}· {user?.email} ({user?.role})
-            </span>
-          </span>
-          <Button size="sm" variant="outline" onClick={logout}>
-            Logout
-          </Button>
-          <ThemeToggle />
-        </header>
-        {/* Row 2 — tree sub-header (scoped to this tree) */}
-        <div className="flex items-center gap-3 px-4 sm:px-6 h-12 border-t border-border/60">
-          {renaming ? (
-            <span className="inline-flex items-center gap-2">
-              <Input
-                autoFocus
-                value={renameDraft}
-                onChange={(e) => setRenameDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") saveTreeName();
-                  else if (e.key === "Escape") cancelRename();
-                }}
-                disabled={renameBusy}
-                className="text-lg w-64"
-              />
-              <Button size="sm" onClick={saveTreeName} disabled={renameBusy}>
-                {renameBusy ? "Saving…" : "Save"}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={cancelRename}
-                disabled={renameBusy}
-              >
-                Cancel
-              </Button>
-              {renameError && (
-                <span className="text-destructive text-xs">{renameError}</span>
-              )}
-            </span>
-          ) : (
-            <h1
-              onClick={() => {
-                setRenameDraft(treeName);
-                setRenameError(null);
-                setRenaming(true);
-              }}
-              className="m-0 text-lg font-semibold text-primary uppercase tracking-[0.15em] cursor-pointer truncate min-w-0"
-              title="Click to rename"
-            >
-              ◆ {treeName} ✎
-            </h1>
-          )}
-          {/* Search: by name, nickname, id, or surname */}
-          <div className="ml-auto relative flex-1 max-w-sm min-w-0">
-            <Search className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+    <>
+      <TreeSubHeaderSlot name="title">
+        {renaming ? (
+          <span className="inline-flex items-center gap-2">
             <Input
-              type="text"
-              placeholder="Search by name or ID…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
+              autoFocus
+              value={renameDraft}
+              onChange={(e) => setRenameDraft(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  if (e.shiftKey) goPrevMatch();
-                  else goNextMatch();
-                } else if (e.key === "Escape" && q) {
-                  e.preventDefault();
-                  setQ("");
-                }
+                if (e.key === "Enter") saveTreeName();
+                else if (e.key === "Escape") cancelRename();
               }}
-              className={`pl-8 h-8 ${q ? "pr-28" : "pr-3"}`}
+              disabled={renameBusy}
+              className="text-lg w-64"
             />
-            {q && (
-              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-                <span className="px-1 text-[10px] tabular-nums text-muted-foreground tracking-widest">
-                  {matchedIds.length === 0
-                    ? "no match"
-                    : `${currentMatchIndex + 1} / ${matchedIds.length}`}
-                </span>
-                <button
-                  type="button"
-                  aria-label="Previous match"
-                  onClick={goPrevMatch}
-                  disabled={matchedIds.length === 0}
-                  className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-40 disabled:hover:bg-transparent"
-                >
-                  <ChevronUp className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  aria-label="Next match"
-                  onClick={goNextMatch}
-                  disabled={matchedIds.length === 0}
-                  className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-40 disabled:hover:bg-transparent"
-                >
-                  <ChevronDown className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  aria-label="Clear search"
-                  onClick={() => setQ("")}
-                  className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            )}
-          </div>
-          {/* Single ⋯ actions menu (same on desktop and mobile) */}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              aria-label="More actions"
-              className={buttonVariants({
-                variant: "outline",
-                size: "icon-sm",
-              })}
+            <Button size="sm" onClick={saveTreeName} disabled={renameBusy}>
+              {renameBusy ? "Saving…" : "Save"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={cancelRename}
+              disabled={renameBusy}
             >
-              <MoreHorizontal />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault();
-                  setEditorState({ mode: "create", person: emptyForm(null) });
-                }}
-              >
-                <UserPlus /> Add root person
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault();
-                  expandAll();
-                }}
-              >
-                <Maximize2 /> Expand all
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault();
-                  collapseAll();
-                }}
-              >
-                <Minimize2 /> Collapse all
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault();
-                  handleExport();
-                }}
-              >
-                <Download /> Export JSON
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault();
-                  fileInputRef.current?.click();
-                }}
-              >
-                <Upload /> Import JSON
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onSelect={(e) => {
-                  e.preventDefault();
-                  setDeleteTreeOpen(true);
-                  setDeleteTreeName("");
-                  setDeleteTreeError(null);
-                }}
-              >
-                <Trash2 /> Delete tree
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/json,.json"
-            className="hidden"
-            onChange={onImportFileChosen}
-          />
-        </div>
-      </div>
+              Cancel
+            </Button>
+            {renameError && (
+              <span className="text-destructive text-xs">{renameError}</span>
+            )}
+          </span>
+        ) : (
+          <h1
+            onClick={() => {
+              setRenameDraft(treeName);
+              setRenameError(null);
+              setRenaming(true);
+            }}
+            className="m-0 text-lg font-semibold text-primary uppercase tracking-[0.15em] cursor-pointer truncate min-w-0"
+            title="Click to rename"
+          >
+            ◆ {treeName} ✎
+          </h1>
+        )}
+      </TreeSubHeaderSlot>
+      <TreeSubHeaderSlot name="actions">
+        {/* Match-navigation arrows + counter (editor-only) */}
+        {q && (
+          <div className="flex items-center gap-0.5">
+            <span className="px-1 text-[10px] tabular-nums text-muted-foreground tracking-widest">
+              {matchedIds.length === 0
+                ? "no match"
+                : `${currentMatchIndex + 1} / ${matchedIds.length}`}
+            </span>
+            <button
+              type="button"
+              aria-label="Previous match"
+              onClick={goPrevMatch}
+              disabled={matchedIds.length === 0}
+              className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              <ChevronUp className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              aria-label="Next match"
+              onClick={goNextMatch}
+              disabled={matchedIds.length === 0}
+              className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+        {/* ⋯ actions menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label="More actions"
+            className={buttonVariants({
+              variant: "outline",
+              size: "icon-sm",
+            })}
+          >
+            <MoreHorizontal />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                setEditorState({ mode: "create", person: emptyForm(null) });
+              }}
+            >
+              <UserPlus /> Add root person
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                expandAll();
+              }}
+            >
+              <Maximize2 /> Expand all
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                collapseAll();
+              }}
+            >
+              <Minimize2 /> Collapse all
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                handleExport();
+              }}
+            >
+              <Download /> Export JSON
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                fileInputRef.current?.click();
+              }}
+            >
+              <Upload /> Import JSON
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onSelect={(e) => {
+                e.preventDefault();
+                setDeleteTreeOpen(true);
+                setDeleteTreeName("");
+                setDeleteTreeError(null);
+              }}
+            >
+              <Trash2 /> Delete tree
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={onImportFileChosen}
+        />
+      </TreeSubHeaderSlot>
 
       <div className="flex-1 min-h-0 p-6 overflow-auto">
         <ul className="tree-list">{roots.map((r) => renderNode(r, 0))}</ul>
@@ -1108,6 +1054,6 @@ export function Editor() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }
