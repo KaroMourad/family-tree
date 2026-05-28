@@ -47,15 +47,24 @@ export function TreeLayout() {
               treeName={tree.name}
               viewLabel={isChooser ? null : viewLabel}
             />
-            <SearchField q={q} setQ={setQ} className="ml-auto" />
-            <span className="hidden md:inline text-xs text-muted-foreground tracking-widest truncate">
+            {!isChooser && <SearchField q={q} setQ={setQ} className="ml-auto" />}
+            <span
+              className={`hidden md:inline text-xs text-muted-foreground tracking-widest truncate ${
+                isChooser ? "ml-auto" : ""
+              }`}
+            >
               {people.length} people
               <span className="hidden lg:inline">
                 {" "}
                 · {user?.email} ({user?.role})
               </span>
             </span>
-            <Button size="sm" variant="outline" onClick={logout}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={logout}
+              className={isChooser ? "md:ml-0 ml-auto" : ""}
+            >
               Logout
             </Button>
             <ThemeToggle />
