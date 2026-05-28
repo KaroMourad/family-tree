@@ -69,7 +69,12 @@ function genderClass(g?: string | null) {
 
 function countNodes(nodes: Array<{ children?: unknown[] }>): number {
   return nodes.reduce(
-    (sum, n) => sum + 1 + (Array.isArray(n.children) ? countNodes(n.children as Array<{ children?: unknown[] }>) : 0),
+    (sum, n) =>
+      sum +
+      1 +
+      (Array.isArray(n.children)
+        ? countNodes(n.children as Array<{ children?: unknown[] }>)
+        : 0),
     0,
   );
 }
@@ -113,10 +118,16 @@ function PersonForm({
   const [form, setForm] = useState<FormState>(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const hasMoreInitial =
-    !!(initial.nickname || initial.surnameBirth || initial.surnameNow ||
-       initial.birthYear || initial.deathYear ||
-       initial.partnerName || initial.profession || initial.bio);
+  const hasMoreInitial = !!(
+    initial.nickname ||
+    initial.surnameBirth ||
+    initial.surnameNow ||
+    initial.birthYear ||
+    initial.deathYear ||
+    initial.partnerName ||
+    initial.profession ||
+    initial.bio
+  );
   const [moreOpen, setMoreOpen] = useState(hasMoreInitial);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -137,10 +148,17 @@ function PersonForm({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o && !busy) onCancel(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o && !busy) onCancel();
+      }}
+    >
       <DialogContent className="max-w-xl max-h-[90vh] flex flex-col gap-0 p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
-          <DialogTitle className="uppercase tracking-widest text-primary">{title}</DialogTitle>
+          <DialogTitle className="uppercase tracking-widest text-primary">
+            {title}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-3">
@@ -151,13 +169,24 @@ function PersonForm({
           )}
 
           <div className="space-y-1.5">
-            <Label className="uppercase tracking-widest text-xs text-secondary">Name *</Label>
-            <Input value={form.name} onChange={(e) => update("name", e.target.value)} required />
+            <Label className="uppercase tracking-widest text-xs text-secondary">
+              Name *
+            </Label>
+            <Input
+              value={form.name}
+              onChange={(e) => update("name", e.target.value)}
+              required
+            />
           </div>
 
           <div className="space-y-1.5">
-            <Label className="uppercase tracking-widest text-xs text-secondary">Gender</Label>
-            <Select value={form.gender ?? "_unset"} onValueChange={(v) => update("gender", v === "_unset" ? null : v)}>
+            <Label className="uppercase tracking-widest text-xs text-secondary">
+              Gender
+            </Label>
+            <Select
+              value={form.gender ?? "_unset"}
+              onValueChange={(v) => update("gender", v === "_unset" ? null : v)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="—" />
               </SelectTrigger>
@@ -172,56 +201,105 @@ function PersonForm({
           <Collapsible open={moreOpen} onOpenChange={setMoreOpen}>
             <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-2 text-xs uppercase tracking-widest text-secondary hover:bg-muted/60 transition-colors">
               <span>More details</span>
-              <ChevronDown className={`h-4 w-4 transition-transform ${moreOpen ? "rotate-180" : ""}`} />
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${moreOpen ? "rotate-180" : ""}`}
+              />
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-3 pt-3">
               <div className="space-y-1.5">
-                <Label className="uppercase tracking-widest text-xs text-secondary">Nickname</Label>
-                <Input value={form.nickname ?? ""} onChange={(e) => update("nickname", e.target.value || null)} />
+                <Label className="uppercase tracking-widest text-xs text-secondary">
+                  Nickname
+                </Label>
+                <Input
+                  value={form.nickname ?? ""}
+                  onChange={(e) => update("nickname", e.target.value || null)}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="uppercase tracking-widest text-xs text-secondary">Surname (birth)</Label>
-                  <Input value={form.surnameBirth ?? ""} onChange={(e) => update("surnameBirth", e.target.value || null)} />
+                  <Label className="uppercase tracking-widest text-xs text-secondary">
+                    Surname (birth)
+                  </Label>
+                  <Input
+                    value={form.surnameBirth ?? ""}
+                    onChange={(e) =>
+                      update("surnameBirth", e.target.value || null)
+                    }
+                  />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="uppercase tracking-widest text-xs text-secondary">Surname (now)</Label>
-                  <Input value={form.surnameNow ?? ""} onChange={(e) => update("surnameNow", e.target.value || null)} />
+                  <Label className="uppercase tracking-widest text-xs text-secondary">
+                    Surname (now)
+                  </Label>
+                  <Input
+                    value={form.surnameNow ?? ""}
+                    onChange={(e) =>
+                      update("surnameNow", e.target.value || null)
+                    }
+                  />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="uppercase tracking-widest text-xs text-secondary">Birth year</Label>
+                  <Label className="uppercase tracking-widest text-xs text-secondary">
+                    Birth year
+                  </Label>
                   <Input
                     type="number"
                     value={form.birthYear ?? ""}
-                    onChange={(e) => update("birthYear", e.target.value ? Number(e.target.value) : null)}
+                    onChange={(e) =>
+                      update(
+                        "birthYear",
+                        e.target.value ? Number(e.target.value) : null,
+                      )
+                    }
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="uppercase tracking-widest text-xs text-secondary">Death year</Label>
+                  <Label className="uppercase tracking-widest text-xs text-secondary">
+                    Death year
+                  </Label>
                   <Input
                     type="number"
                     value={form.deathYear ?? ""}
-                    onChange={(e) => update("deathYear", e.target.value ? Number(e.target.value) : null)}
+                    onChange={(e) =>
+                      update(
+                        "deathYear",
+                        e.target.value ? Number(e.target.value) : null,
+                      )
+                    }
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="uppercase tracking-widest text-xs text-secondary">Partner name</Label>
-                <Input value={form.partnerName ?? ""} onChange={(e) => update("partnerName", e.target.value || null)} />
+                <Label className="uppercase tracking-widest text-xs text-secondary">
+                  Partner name
+                </Label>
+                <Input
+                  value={form.partnerName ?? ""}
+                  onChange={(e) =>
+                    update("partnerName", e.target.value || null)
+                  }
+                />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="uppercase tracking-widest text-xs text-secondary">Profession</Label>
-                <Input value={form.profession ?? ""} onChange={(e) => update("profession", e.target.value || null)} />
+                <Label className="uppercase tracking-widest text-xs text-secondary">
+                  Profession
+                </Label>
+                <Input
+                  value={form.profession ?? ""}
+                  onChange={(e) => update("profession", e.target.value || null)}
+                />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="uppercase tracking-widest text-xs text-secondary">Notes / Bio</Label>
+                <Label className="uppercase tracking-widest text-xs text-secondary">
+                  Notes / Bio
+                </Label>
                 <Textarea
                   value={form.bio ?? ""}
                   onChange={(e) => update("bio", e.target.value || null)}
@@ -233,7 +311,9 @@ function PersonForm({
         </div>
 
         <DialogFooter className="px-6 py-4 border-t border-border shrink-0">
-          <Button variant="outline" onClick={onCancel} disabled={busy}>Cancel</Button>
+          <Button variant="outline" onClick={onCancel} disabled={busy}>
+            Cancel
+          </Button>
           <Button onClick={submit} disabled={busy}>
             {busy ? "Saving…" : "Save"}
           </Button>
@@ -243,7 +323,11 @@ function PersonForm({
   );
 }
 
-type EditorState = { mode: "create" | "edit"; person: FormState; id?: string } | null;
+type EditorState = {
+  mode: "create" | "edit";
+  person: FormState;
+  id?: string;
+} | null;
 
 export function Editor() {
   const { treeId } = useParams();
@@ -263,13 +347,18 @@ export function Editor() {
   const deleteTreeMutation = useDeleteTree();
   const importTreeMutation = useImportTree(treeId!);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [pendingImport, setPendingImport] = useState<{ doc: unknown; count: number } | null>(null);
+  const [pendingImport, setPendingImport] = useState<{
+    doc: unknown;
+    count: number;
+  } | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
 
   async function handleExport() {
     try {
       const doc = await (await import("../api/queries")).exportTree(treeId!);
-      const blob = new Blob([JSON.stringify(doc, null, 2)], { type: "application/json" });
+      const blob = new Blob([JSON.stringify(doc, null, 2)], {
+        type: "application/json",
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -299,7 +388,9 @@ export function Editor() {
       // Validate the document shape before offering a destructive replace, so
       // the confirm count is meaningful and matches what the server accepts.
       if (doc?.formatVersion !== 1 || !Array.isArray(doc.people)) {
-        setImportError("That file isn't a family-tree export (expected formatVersion 1 with a people array).");
+        setImportError(
+          "That file isn't a family-tree export (expected formatVersion 1 with a people array).",
+        );
         toast.error("That file isn't a family-tree export.");
         return;
       }
@@ -389,7 +480,10 @@ export function Editor() {
   async function handleSave(data: FormState) {
     const { id: _omit, ...rest } = data as Record<string, unknown> as any;
     if (editorState?.mode === "edit") {
-      await updatePersonMutation.mutateAsync({ id: editorState.id!, patch: rest });
+      await updatePersonMutation.mutateAsync({
+        id: editorState.id!,
+        patch: rest,
+      });
     } else {
       await createPersonMutation.mutateAsync(rest);
     }
@@ -426,7 +520,8 @@ export function Editor() {
     setDefaultOpen(false);
     setOpenIds(new Set());
   }
-  const isNodeOpen = (id: string) => (openIds.has(id) ? !defaultOpen : defaultOpen);
+  const isNodeOpen = (id: string) =>
+    openIds.has(id) ? !defaultOpen : defaultOpen;
 
   function countDescendants(id: string): number {
     const kids = byParent.get(id) ?? [];
@@ -438,7 +533,10 @@ export function Editor() {
     const isOpen = isNodeOpen(p.id);
     const cls = ["card", genderClass(p.gender)];
     return (
-      <li key={p.id} className={`node${!isOpen && kids.length > 0 ? " collapsed" : ""}`}>
+      <li
+        key={p.id}
+        className={`node${!isOpen && kids.length > 0 ? " collapsed" : ""}`}
+      >
         <span className={cls.join(" ")}>
           <span
             className={`toggle${kids.length === 0 ? " empty" : ""}`}
@@ -449,7 +547,9 @@ export function Editor() {
           <span className="name">{p.name}</span>
           {(p.birthYear || p.deathYear) && (
             <span className="meta">
-              ({p.birthYear ?? ""}{p.birthYear || p.deathYear ? " – " : ""}{p.deathYear ?? ""})
+              ({p.birthYear ?? ""}
+              {p.birthYear || p.deathYear ? " – " : ""}
+              {p.deathYear ?? ""})
             </span>
           )}
           <span className="id-tag">#{p.id}</span>
@@ -467,7 +567,9 @@ export function Editor() {
               size="sm"
               variant="ghost"
               className="h-6 px-2 text-[10px] text-primary uppercase tracking-widest hover:bg-primary/15"
-              onClick={() => setEditorState({ mode: "create", person: emptyForm(p.id) })}
+              onClick={() =>
+                setEditorState({ mode: "create", person: emptyForm(p.id) })
+              }
               title="Add child"
             >
               + Child
@@ -476,7 +578,13 @@ export function Editor() {
               size="sm"
               variant="ghost"
               className="h-6 px-2 text-[10px] uppercase tracking-widest"
-              onClick={() => setEditorState({ mode: "edit", person: { ...(p as any), name: p.name }, id: p.id })}
+              onClick={() =>
+                setEditorState({
+                  mode: "edit",
+                  person: { ...(p as any), name: p.name },
+                  id: p.id,
+                })
+              }
             >
               Edit
             </Button>
@@ -484,7 +592,10 @@ export function Editor() {
               size="sm"
               variant="ghost"
               className="h-6 px-2 text-[10px] text-destructive uppercase tracking-widest hover:bg-destructive/15"
-              onClick={() => { setDeleteTarget(p); setDeleteError(null); }}
+              onClick={() => {
+                setDeleteTarget(p);
+                setDeleteError(null);
+              }}
             >
               Delete
             </Button>
@@ -498,24 +609,32 @@ export function Editor() {
   }
 
   if (loading) return <div className="p-10">Loading…</div>;
-  if (error) return <div className="p-10 text-destructive">Error: {error.message}</div>;
+  if (error)
+    return <div className="p-10 text-destructive">Error: {error.message}</div>;
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       <div className="shrink-0 z-10 border-b border-border bg-background/90 backdrop-blur">
         {/* Row 1 — app/nav header */}
         <header className="flex flex-wrap items-center gap-3 px-6 py-3">
-          <Button asChild variant="outline" size="sm" className="uppercase tracking-widest">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="uppercase tracking-widest"
+          >
             <Link to={`/tree/${treeId}`}>← Views</Link>
           </Button>
           <span className="ml-auto text-xs text-muted-foreground tracking-widest">
             {people.length} people · {user?.email} ({user?.role})
           </span>
-          <Button size="sm" variant="outline" onClick={logout}>Logout</Button>
+          <Button size="sm" variant="outline" onClick={logout}>
+            Logout
+          </Button>
           <ThemeToggle />
         </header>
         {/* Row 2 — tree sub-header (scoped to this tree) */}
-        <div className="flex flex-wrap items-center gap-3 px-6 py-2 border-t border-border/60">
+        <div className="flex flex-wrap items-center gap-3 px-6 h-12 border-t border-border/60">
           {renaming ? (
             <span className="inline-flex items-center gap-2">
               <Input
@@ -532,10 +651,17 @@ export function Editor() {
               <Button size="sm" onClick={saveTreeName} disabled={renameBusy}>
                 {renameBusy ? "Saving…" : "Save"}
               </Button>
-              <Button size="sm" variant="outline" onClick={cancelRename} disabled={renameBusy}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={cancelRename}
+                disabled={renameBusy}
+              >
                 Cancel
               </Button>
-              {renameError && <span className="text-destructive text-xs">{renameError}</span>}
+              {renameError && (
+                <span className="text-destructive text-xs">{renameError}</span>
+              )}
             </span>
           ) : (
             <h1
@@ -550,31 +676,58 @@ export function Editor() {
               ◆ {treeName} ✎
             </h1>
           )}
-          <Button size="sm" onClick={() => setEditorState({ mode: "create", person: emptyForm(null) })} className="ml-auto uppercase tracking-widest">
+          <Button
+            size="sm"
+            onClick={() =>
+              setEditorState({ mode: "create", person: emptyForm(null) })
+            }
+            className="ml-auto uppercase tracking-widest"
+          >
             + Root person
           </Button>
-          <Separator orientation="vertical" className="h-6 mx-1" />
-          <Button variant="ghost" size="sm" onClick={expandAll} className="uppercase tracking-widest">
+          <Separator orientation="vertical" className="mx-1" />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={expandAll}
+            className="uppercase tracking-widest"
+          >
             <Maximize2 /> Expand all
           </Button>
-          <Button variant="ghost" size="sm" onClick={collapseAll} className="uppercase tracking-widest">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={collapseAll}
+            className="uppercase tracking-widest"
+          >
             <Minimize2 /> Collapse all
           </Button>
+          <Separator orientation="vertical" className="mx-1" />
           <DropdownMenu>
             <DropdownMenuTrigger
-              className={buttonVariants({ variant: "outline", size: "sm", className: "uppercase tracking-widest" })}
+              className={buttonVariants({
+                variant: "outline",
+                size: "sm",
+                className: "uppercase tracking-widest",
+              })}
             >
               Manage <ChevronDown className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              <DropdownMenuItem onSelect={handleExport}>Export JSON</DropdownMenuItem>
+              <DropdownMenuItem onSelect={handleExport}>
+                Export JSON
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => fileInputRef.current?.click()}>
                 Import JSON
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
-                onSelect={() => { setDeleteTreeOpen(true); setDeleteTreeName(""); setDeleteTreeError(null); }}
+                onSelect={() => {
+                  setDeleteTreeOpen(true);
+                  setDeleteTreeName("");
+                  setDeleteTreeError(null);
+                }}
               >
                 Delete tree
               </DropdownMenuItem>
@@ -590,22 +743,35 @@ export function Editor() {
         </div>
       </div>
 
-        <div className="flex-1 min-h-0 p-6 overflow-auto">
-          <ul className="tree-list">{roots.map((r) => renderNode(r, 0))}</ul>
-        </div>
+      <div className="flex-1 min-h-0 p-6 overflow-auto">
+        <ul className="tree-list">{roots.map((r) => renderNode(r, 0))}</ul>
+      </div>
 
       <PersonForm
-        key={editorState ? `${editorState.mode}-${editorState.id ?? "new"}` : "closed"}
+        key={
+          editorState
+            ? `${editorState.mode}-${editorState.id ?? "new"}`
+            : "closed"
+        }
         open={!!editorState}
         initial={editorState?.person ?? emptyForm(null)}
-        title={editorState?.mode === "create" ? "Add person" : `Edit ${editorState?.person.name ?? ""}`}
+        title={
+          editorState?.mode === "create"
+            ? "Add person"
+            : `Edit ${editorState?.person.name ?? ""}`
+        }
         onCancel={() => setEditorState(null)}
         onSave={handleSave}
       />
 
       <AlertDialog
         open={!!deleteTarget}
-        onOpenChange={(o) => { if (!o && !deleteBusy) { setDeleteTarget(null); setDeleteError(null); } }}
+        onOpenChange={(o) => {
+          if (!o && !deleteBusy) {
+            setDeleteTarget(null);
+            setDeleteError(null);
+          }
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -613,12 +779,13 @@ export function Editor() {
               Delete {deleteTarget?.name}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteTarget && (() => {
-                const kids = byParent.get(deleteTarget.id) ?? [];
-                return kids.length > 0
-                  ? `Their ${kids.length} direct child${kids.length === 1 ? "" : "ren"} will become roots. This cannot be undone.`
-                  : "This cannot be undone.";
-              })()}
+              {deleteTarget &&
+                (() => {
+                  const kids = byParent.get(deleteTarget.id) ?? [];
+                  return kids.length > 0
+                    ? `Their ${kids.length} direct child${kids.length === 1 ? "" : "ren"} will become roots. This cannot be undone.`
+                    : "This cannot be undone.";
+                })()}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError && (
@@ -629,7 +796,10 @@ export function Editor() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteBusy}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={(e) => { e.preventDefault(); confirmDelete(); }}
+              onClick={(e) => {
+                e.preventDefault();
+                confirmDelete();
+              }}
               disabled={deleteBusy}
               className="bg-destructive text-white hover:bg-destructive/90"
             >
@@ -657,7 +827,8 @@ export function Editor() {
           </DialogHeader>
           <div className="space-y-3 text-sm">
             <p>
-              This deletes the tree and all {people.length} people in it. There is no undo.
+              This deletes the tree and all {people.length} people in it. There
+              is no undo.
             </p>
             <p>Type the tree name to confirm:</p>
             <Input
@@ -692,7 +863,12 @@ export function Editor() {
 
       <AlertDialog
         open={!!pendingImport}
-        onOpenChange={(o) => { if (!o && !importTreeMutation.isPending) { setPendingImport(null); setImportError(null); } }}
+        onOpenChange={(o) => {
+          if (!o && !importTreeMutation.isPending) {
+            setPendingImport(null);
+            setImportError(null);
+          }
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -701,7 +877,8 @@ export function Editor() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               This will replace all {people.length} people in "{treeName}" with{" "}
-              {pendingImport?.count ?? 0} people from the file. This cannot be undone.
+              {pendingImport?.count ?? 0} people from the file. This cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           {importError && (
@@ -710,9 +887,14 @@ export function Editor() {
             </Alert>
           )}
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={importTreeMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={importTreeMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
-              onClick={(e) => { e.preventDefault(); confirmImport(); }}
+              onClick={(e) => {
+                e.preventDefault();
+                confirmImport();
+              }}
               disabled={importTreeMutation.isPending}
               className="bg-destructive text-white hover:bg-destructive/90"
             >
