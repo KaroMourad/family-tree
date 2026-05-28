@@ -1,11 +1,8 @@
 import { Link } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext";
 import { usePeople } from "../hooks/usePeople";
 import { allRoots, nestPeople } from "../api/nest";
 import { useTreeContext } from "../tree/TreeContext";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 type ViewCard = {
   to: string;
@@ -18,7 +15,6 @@ type ViewCard = {
 
 export function TreeChooser() {
   const tree = useTreeContext();
-  const { user, logout } = useAuth();
   const { data: people } = usePeople(tree.id);
   const peopleCount = people?.length ?? 0;
   const rootName = people ? (allRoots(nestPeople(people))[0]?.name ?? "") : "";
@@ -32,27 +28,16 @@ export function TreeChooser() {
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-50 flex items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur text-xs text-muted-foreground tracking-widest">
-        <Button asChild variant="outline" size="sm" className="uppercase tracking-widest">
-          <Link to="/">← All trees</Link>
-        </Button>
-        {user && (
-          <span className="truncate ml-auto">
-            Signed in as <strong className="text-foreground">{user.email}</strong> ({user.role})
-          </span>
-        )}
-        {user && <Button variant="outline" size="sm" onClick={logout}>Logout</Button>}
-        <ThemeToggle />
-      </header>
-
+    <div className="flex-1 min-h-0 overflow-auto">
       <div className="max-w-5xl mx-auto py-12 px-5">
         <header className="text-center mb-14">
           <h1 className="text-5xl text-primary uppercase tracking-[0.2em] font-semibold m-0">
             ◆ {tree.name} ◆
           </h1>
           <div className="w-16 h-0.5 bg-primary mx-auto my-4" />
-          <p className="text-base text-muted-foreground italic tracking-widest">Choose a view</p>
+          <p className="text-base text-muted-foreground italic tracking-widest">
+            Choose a view
+          </p>
         </header>
 
         <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-6">
