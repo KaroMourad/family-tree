@@ -59,7 +59,6 @@ function ListNode({ node, isOpen, match, isOpenFor, onSelect, onToggle }: NodePr
         </span>
         <span className="name">{node.name}</span>
         {dateRange(node) && <span className="meta">{dateRange(node)}</span>}
-        <span className="id-tag">#{node.id}</span>
       </span>
       {hasKids && (
         <ul>

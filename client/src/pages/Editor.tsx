@@ -560,7 +560,6 @@ export function Editor() {
               {p.deathYear ?? ""})
             </span>
           )}
-          <span className="id-tag">#{p.id}</span>
           {kids.length > 0 && (
             <span className="children-count">{countDescendants(p.id)}</span>
           )}
