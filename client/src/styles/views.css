@@ -36,7 +36,12 @@ li.node::before {
   letter-spacing: 1px; text-transform: uppercase; font-size: 13px;
 }
 .meta { font-size: 11px; color: var(--muted-color); letter-spacing: 1px; }
-.id-tag { font-size: 10px; color: var(--muted-color); letter-spacing: 1px; }
+.id-tag {
+  font-size: 10px; color: var(--muted-color); letter-spacing: 1px;
+  opacity: 0; transition: opacity 120ms ease;
+}
+.card:hover .id-tag,
+.card:focus-within .id-tag { opacity: 1; }
 .children-count {
   font-size: 10px; color: var(--muted-color); background: var(--border-color);
   border-radius: 99px; padding: 1px 7px; letter-spacing: 0.5px;
