@@ -38,6 +38,7 @@ import {
   MoreHorizontal,
   Trash2,
   Upload,
+  UserPlus,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -686,24 +687,27 @@ export function Editor() {
               ◆ {treeName} ✎
             </h1>
           )}
-          <Button
-            size="sm"
-            onClick={() =>
-              setEditorState({ mode: "create", person: emptyForm(null) })
-            }
-            className="ml-auto uppercase tracking-widest"
-          >
-            + Root person
-          </Button>
           {/* Single ⋯ actions menu (same on desktop and mobile) */}
           <DropdownMenu>
             <DropdownMenuTrigger
               aria-label="More actions"
-              className={buttonVariants({ variant: "outline", size: "icon-sm" })}
+              className={buttonVariants({
+                variant: "outline",
+                size: "icon-sm",
+                className: "ml-auto",
+              })}
             >
               <MoreHorizontal />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onSelect={() =>
+                  setEditorState({ mode: "create", person: emptyForm(null) })
+                }
+              >
+                <UserPlus /> Add root person
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 onSelect={(e) => {
                   e.preventDefault();
