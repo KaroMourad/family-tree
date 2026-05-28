@@ -45,9 +45,10 @@ export function TreeLayout() {
             treeName={tree.name}
             viewLabel={isChooser ? null : viewLabel}
           />
-          <span className="ml-auto text-xs text-muted-foreground tracking-widest truncate">
+          <SearchField q={q} setQ={setQ} className="ml-auto" />
+          <span className="hidden md:inline text-xs text-muted-foreground tracking-widest truncate">
             {people.length} people
-            <span className="hidden sm:inline">
+            <span className="hidden lg:inline">
               {" "}
               · {user?.email} ({user?.role})
             </span>
@@ -60,11 +61,9 @@ export function TreeLayout() {
         {/* Tree sub-header */}
         {!isChooser && (
           <TreeSubHeaderRow
-            tree={tree}
-            q={q}
-            setQ={setQ}
             titleSlot={slots.title}
             actionsSlot={slots.actions}
+            treeName={tree.name}
           />
         )}
       </div>
@@ -138,52 +137,61 @@ function Breadcrumb({
 }
 
 function TreeSubHeaderRow({
-  tree,
-  q,
-  setQ,
   titleSlot,
   actionsSlot,
+  treeName,
 }: {
-  tree: { name: string };
-  q: string;
-  setQ: (s: string) => void;
   titleSlot: React.ReactNode;
   actionsSlot: React.ReactNode;
+  treeName: string;
 }) {
   return (
     <div className="flex items-center gap-3 px-4 sm:px-6 h-12 border-t border-border/60">
       {titleSlot ?? (
         <h1 className="m-0 text-lg font-semibold text-primary uppercase tracking-[0.15em] truncate min-w-0">
-          ◆ {tree.name}
+          ◆ {treeName}
         </h1>
       )}
-      <div className="ml-auto relative flex-1 max-w-sm min-w-0">
-        <Search className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          type="text"
-          placeholder="Search by name or ID…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Escape" && q) {
-              e.preventDefault();
-              setQ("");
-            }
-          }}
-          className={`pl-8 h-8 ${q ? "pr-8" : "pr-3"}`}
-        />
-        {q && (
-          <button
-            type="button"
-            aria-label="Clear search"
-            onClick={() => setQ("")}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </div>
-      {actionsSlot}
+      <div className="ml-auto flex items-center gap-3">{actionsSlot}</div>
+    </div>
+  );
+}
+
+function SearchField({
+  q,
+  setQ,
+  className,
+}: {
+  q: string;
+  setQ: (s: string) => void;
+  className?: string;
+}) {
+  return (
+    <div className={`relative flex-1 max-w-sm min-w-0 ${className ?? ""}`}>
+      <Search className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <Input
+        type="text"
+        placeholder="Search by name or ID…"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape" && q) {
+            e.preventDefault();
+            setQ("");
+          }
+        }}
+        className={`pl-8 h-8 ${q ? "pr-8" : "pr-3"}`}
+      />
+      {q && (
+        <button
+          type="button"
+          aria-label="Clear search"
+          onClick={() => setQ("")}
+          className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
     </div>
   );
 }
