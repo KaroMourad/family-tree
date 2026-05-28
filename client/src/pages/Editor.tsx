@@ -701,9 +701,10 @@ export function Editor() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
-                onSelect={() =>
-                  setEditorState({ mode: "create", person: emptyForm(null) })
-                }
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setEditorState({ mode: "create", person: emptyForm(null) });
+                }}
               >
                 <UserPlus /> Add root person
               </DropdownMenuItem>
@@ -725,16 +726,27 @@ export function Editor() {
                 <Minimize2 /> Collapse all
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={handleExport}>
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  handleExport();
+                }}
+              >
                 <Download /> Export JSON
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => fileInputRef.current?.click()}>
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }}
+              >
                 <Upload /> Import JSON
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
-                onSelect={() => {
+                onSelect={(e) => {
+                  e.preventDefault();
                   setDeleteTreeOpen(true);
                   setDeleteTreeName("");
                   setDeleteTreeError(null);
