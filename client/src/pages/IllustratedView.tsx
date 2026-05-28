@@ -5,10 +5,9 @@ import { usePeople } from "../hooks/usePeople";
 import { firstRoot, flattenTree, nestPeople } from "../api/nest";
 import { useUIStore } from "../store/ui";
 import { DetailPanel } from "../components/DetailPanel";
+import { TreeSubHeaderSlot } from "../components/TreeSubHeaderSlot";
 import type { TreeNode } from "../types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import "../styles/views.css";
 
 // Recursive line-art tree (port of build_freepik.py)
@@ -96,7 +95,6 @@ export function IllustratedView() {
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
   const setSelectedId = useUIStore((s) => s.setSelectedPerson);
   const q = useUIStore((s) => s.searchQuery);
-  const setQ = useUIStore((s) => s.setSearchQuery);
 
   useEffect(() => {
     setSelectedId(null);
@@ -239,31 +237,50 @@ export function IllustratedView() {
 
 
   return (
-    <div className="compact flex flex-col h-screen overflow-hidden bg-background text-foreground">
-      <header className="shrink-0 z-10 flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur">
-        <Button asChild variant="outline" size="sm" className="uppercase tracking-widest">
-          <Link to={`/tree/${treeId}`}>← Views</Link>
+    <>
+      <TreeSubHeaderSlot name="actions">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={fit}
+          className="uppercase tracking-widest"
+        >
+          Fit
         </Button>
-        <h1 className="m-0 text-lg font-semibold text-primary uppercase tracking-[0.15em]">
-          ◆ Illustrated Tree
-        </h1>
-        <Input
-          type="search"
-          placeholder="Search by name..."
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          className="w-56"
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() =>
+            zoomRef.current &&
+            d3
+              .select(svgRef.current!)
+              .transition()
+              .call(zoomRef.current.scaleBy as any, 1.3)
+          }
+        >
+          +
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() =>
+            zoomRef.current &&
+            d3
+              .select(svgRef.current!)
+              .transition()
+              .call(zoomRef.current.scaleBy as any, 1 / 1.3)
+          }
+        >
+          −
+        </Button>
+      </TreeSubHeaderSlot>
+      <div className="compact flex-1 min-h-0 relative overflow-hidden">
+        <svg
+          ref={svgRef}
+          className="block w-full h-full cursor-grab active:cursor-grabbing bg-background"
         />
-        <Button variant="outline" size="sm" onClick={fit} className="uppercase tracking-widest">Fit</Button>
-        <Button variant="outline" size="sm" onClick={() => zoomRef.current && d3.select(svgRef.current!).transition().call(zoomRef.current.scaleBy as any, 1.3)}>+</Button>
-        <Button variant="outline" size="sm" onClick={() => zoomRef.current && d3.select(svgRef.current!).transition().call(zoomRef.current.scaleBy as any, 1 / 1.3)}>−</Button>
-        <span className="ml-auto text-xs text-muted-foreground tracking-widest">{Object.keys(byId).length} members</span>
-        <ThemeToggle />
-      </header>
-      <div className="flex-1 min-h-0 relative overflow-hidden">
-        <svg ref={svgRef} className="block w-full h-full cursor-grab active:cursor-grabbing bg-background" />
       </div>
       <DetailPanel />
-    </div>
+    </>
   );
 }
