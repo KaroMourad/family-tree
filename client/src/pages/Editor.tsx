@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronDown, Maximize2, Minimize2 } from "lucide-react";
+import { ChevronDown, Maximize2, Minimize2, MoreHorizontal } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -616,7 +616,7 @@ export function Editor() {
     <div className="flex flex-col h-screen bg-background text-foreground">
       <div className="shrink-0 z-10 border-b border-border bg-background/90 backdrop-blur">
         {/* Row 1 — app/nav header */}
-        <header className="flex flex-wrap items-center gap-3 px-6 py-3">
+        <header className="flex flex-wrap items-center gap-3 px-4 sm:px-6 py-3">
           <Button
             asChild
             variant="outline"
@@ -625,8 +625,11 @@ export function Editor() {
           >
             <Link to={`/tree/${treeId}`}>← Views</Link>
           </Button>
-          <span className="ml-auto text-xs text-muted-foreground tracking-widest">
-            {people.length} people · {user?.email} ({user?.role})
+          <span className="ml-auto text-xs text-muted-foreground tracking-widest truncate">
+            {people.length} people
+            <span className="hidden sm:inline">
+              {" "}· {user?.email} ({user?.role})
+            </span>
           </span>
           <Button size="sm" variant="outline" onClick={logout}>
             Logout
@@ -634,7 +637,7 @@ export function Editor() {
           <ThemeToggle />
         </header>
         {/* Row 2 — tree sub-header (scoped to this tree) */}
-        <div className="flex flex-wrap items-center gap-3 px-6 h-12 border-t border-border/60">
+        <div className="flex items-center gap-3 px-4 sm:px-6 h-12 border-t border-border/60">
           {renaming ? (
             <span className="inline-flex items-center gap-2">
               <Input
@@ -670,7 +673,7 @@ export function Editor() {
                 setRenameError(null);
                 setRenaming(true);
               }}
-              className="m-0 text-lg font-semibold text-primary uppercase tracking-[0.15em] cursor-pointer"
+              className="m-0 text-lg font-semibold text-primary uppercase tracking-[0.15em] cursor-pointer truncate min-w-0"
               title="Click to rename"
             >
               ◆ {treeName} ✎
@@ -685,35 +688,88 @@ export function Editor() {
           >
             + Root person
           </Button>
-          <Separator orientation="vertical" className="mx-1" />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={expandAll}
-            className="uppercase tracking-widest"
-          >
-            <Maximize2 /> Expand all
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={collapseAll}
-            className="uppercase tracking-widest"
-          >
-            <Minimize2 /> Collapse all
-          </Button>
-          <Separator orientation="vertical" className="mx-1" />
+          {/* Desktop (≥sm): inline view + management controls */}
+          <div className="hidden sm:flex items-center gap-3">
+            <Separator orientation="vertical" className="mx-1" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={expandAll}
+              className="uppercase tracking-widest"
+            >
+              <Maximize2 /> Expand all
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={collapseAll}
+              className="uppercase tracking-widest"
+            >
+              <Minimize2 /> Collapse all
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className={buttonVariants({
+                  variant: "outline",
+                  size: "sm",
+                  className: "uppercase tracking-widest",
+                })}
+              >
+                Manage <ChevronDown className="h-4 w-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem onSelect={handleExport}>
+                  Export JSON
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => fileInputRef.current?.click()}
+                >
+                  Import JSON
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={() => {
+                    setDeleteTreeOpen(true);
+                    setDeleteTreeName("");
+                    setDeleteTreeError(null);
+                  }}
+                >
+                  Delete tree
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          {/* Mobile (<sm): everything collapsed into a single ⋯ menu */}
           <DropdownMenu>
             <DropdownMenuTrigger
+              aria-label="More actions"
               className={buttonVariants({
                 variant: "outline",
-                size: "sm",
-                className: "uppercase tracking-widest",
+                size: "icon-sm",
+                className: "sm:hidden",
               })}
             >
-              Manage <ChevronDown className="h-4 w-4" />
+              <MoreHorizontal />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  expandAll();
+                }}
+              >
+                <Maximize2 /> Expand all
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  collapseAll();
+                }}
+              >
+                <Minimize2 /> Collapse all
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={handleExport}>
                 Export JSON
               </DropdownMenuItem>
