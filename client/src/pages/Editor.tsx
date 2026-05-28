@@ -501,10 +501,20 @@ export function Editor() {
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
-      <header className="shrink-0 z-10 flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur">
+      <div className="shrink-0 z-10 border-b border-border bg-background/90 backdrop-blur">
+        {/* Row 1 — app/nav header */}
+        <header className="flex flex-wrap items-center gap-3 px-6 py-3">
           <Button asChild variant="outline" size="sm" className="uppercase tracking-widest">
             <Link to={`/tree/${treeId}`}>← Views</Link>
           </Button>
+          <span className="ml-auto text-xs text-muted-foreground tracking-widest">
+            {people.length} people · {user?.email} ({user?.role})
+          </span>
+          <Button size="sm" variant="outline" onClick={logout}>Logout</Button>
+          <ThemeToggle />
+        </header>
+        {/* Row 2 — tree sub-header (scoped to this tree) */}
+        <div className="flex flex-wrap items-center gap-3 px-6 py-2 border-t border-border/60">
           {renaming ? (
             <span className="inline-flex items-center gap-2">
               <Input
@@ -587,12 +597,8 @@ export function Editor() {
             className="hidden"
             onChange={onImportFileChosen}
           />
-          <span className="ml-auto text-xs text-muted-foreground tracking-widest">
-            {people.length} people · {user?.email} ({user?.role})
-          </span>
-          <Button size="sm" variant="outline" onClick={logout}>Logout</Button>
-          <ThemeToggle />
-        </header>
+        </div>
+      </div>
 
         <div className="flex-1 min-h-0 p-6 overflow-auto">
           <ul className="tree-list">{roots.map((r) => renderNode(r, 0))}</ul>
