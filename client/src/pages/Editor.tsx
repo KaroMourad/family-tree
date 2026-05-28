@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useTreeContext } from "../tree/TreeContext";
@@ -32,6 +32,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   ChevronDown,
+  ChevronUp,
   Download,
   Maximize2,
   Minimize2,
@@ -519,6 +520,46 @@ export function Editor() {
     return set;
   }, [matches, parentOf]);
 
+  // Match ids in DOM order (pre-order traversal), so up/down navigation
+  // visits matches top-to-bottom as they appear in the tree.
+  const matchedIds = useMemo(() => {
+    const out: string[] = [];
+    if (matches.size === 0) return out;
+    const walk = (list: Person[]) => {
+      for (const p of list) {
+        if (matches.has(p.id)) out.push(p.id);
+        const kids = byParent.get(p.id);
+        if (kids) walk(kids);
+      }
+    };
+    walk(roots);
+    return out;
+  }, [matches, byParent, roots]);
+
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+  // Whenever the set of matches changes, reset to the first match.
+  useEffect(() => {
+    setCurrentMatchIndex(0);
+  }, [matchedIds]);
+  // Scroll the currently-focused match into view.
+  useEffect(() => {
+    if (matchedIds.length === 0) return;
+    const id = matchedIds[currentMatchIndex];
+    if (!id) return;
+    const el = document.getElementById(`node-${id}`);
+    if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [matchedIds, currentMatchIndex]);
+
+  const currentMatchId = matchedIds[currentMatchIndex] ?? null;
+  const goPrevMatch = () => {
+    if (matchedIds.length === 0) return;
+    setCurrentMatchIndex((i) => (i - 1 + matchedIds.length) % matchedIds.length);
+  };
+  const goNextMatch = () => {
+    if (matchedIds.length === 0) return;
+    setCurrentMatchIndex((i) => (i + 1) % matchedIds.length);
+  };
+
   async function handleSave(data: FormState) {
     const { id: _omit, ...rest } = data as Record<string, unknown> as any;
     if (editorState?.mode === "edit") {
@@ -582,7 +623,8 @@ export function Editor() {
     return (
       <li
         key={p.id}
-        className={`node${!isOpen && kids.length > 0 ? " collapsed" : ""}${matches.has(p.id) ? " match" : ""}`}
+        id={`node-${p.id}`}
+        className={`node${!isOpen && kids.length > 0 ? " collapsed" : ""}${matches.has(p.id) ? " match" : ""}${currentMatchId === p.id ? " current-match" : ""}`}
       >
         <span className={cls.join(" ")}>
           <span
@@ -723,21 +765,56 @@ export function Editor() {
           <div className="ml-auto relative flex-1 max-w-sm min-w-0">
             <Search className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              type="search"
+              type="text"
               placeholder="Search by name or ID…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              className="pl-8 pr-8 h-8"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (e.shiftKey) goPrevMatch();
+                  else goNextMatch();
+                } else if (e.key === "Escape" && q) {
+                  e.preventDefault();
+                  setQ("");
+                }
+              }}
+              className={`pl-8 h-8 ${q ? "pr-28" : "pr-3"}`}
             />
             {q && (
-              <button
-                type="button"
-                aria-label="Clear search"
-                onClick={() => setQ("")}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
+              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                <span className="px-1 text-[10px] tabular-nums text-muted-foreground tracking-widest">
+                  {matchedIds.length === 0
+                    ? "no match"
+                    : `${currentMatchIndex + 1} / ${matchedIds.length}`}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Previous match"
+                  onClick={goPrevMatch}
+                  disabled={matchedIds.length === 0}
+                  className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+                >
+                  <ChevronUp className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Next match"
+                  onClick={goNextMatch}
+                  disabled={matchedIds.length === 0}
+                  className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+                >
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  onClick={() => setQ("")}
+                  className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
             )}
           </div>
           {/* Single ⋯ actions menu (same on desktop and mobile) */}
