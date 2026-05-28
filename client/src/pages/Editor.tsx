@@ -361,6 +361,15 @@ export function Editor() {
   const q = useUIStore((s) => s.searchQuery);
   const setQ = useUIStore((s) => s.setSearchQuery);
   const setSelectedId = useUIStore((s) => s.setSelectedPerson);
+  // Debounce the value the expensive search derivations read from. Typing
+  // updates the input + store immediately (snappy text + ListView sync);
+  // matches / auto-expand / scroll-into-view only fire ~250ms after you stop.
+  const [debouncedQ, setDebouncedQ] = useState(q);
+  useEffect(() => {
+    if (q === debouncedQ) return;
+    const t = setTimeout(() => setDebouncedQ(q), 250);
+    return () => clearTimeout(t);
+  }, [q, debouncedQ]);
   const importTreeMutation = useImportTree(treeId!);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingImport, setPendingImport] = useState<{
@@ -496,16 +505,18 @@ export function Editor() {
   }, [people]);
 
   // Substring match across name, nickname, id, and surnames — same rule as ListView.
+  // Reads debouncedQ so this and the downstream auto-expand/scroll-into-view
+  // only refire when typing pauses, not on every keystroke.
   const matches = useMemo(() => {
     const set = new Set<string>();
-    const term = q.trim().toLowerCase();
+    const term = debouncedQ.trim().toLowerCase();
     if (!term) return set;
     for (const p of people) {
       const hay = `${p.name} ${p.nickname ?? ""} ${p.id} ${p.surnameNow ?? ""} ${p.surnameBirth ?? ""}`.toLowerCase();
       if (hay.includes(term)) set.add(p.id);
     }
     return set;
-  }, [q, people]);
+  }, [debouncedQ, people]);
 
   // While a query is active, force every ancestor of every match open so the
   // matching nodes are visible (they may otherwise be inside collapsed branches).
