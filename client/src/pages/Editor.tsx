@@ -562,14 +562,8 @@ export function Editor() {
           )}
           <span className="id-tag">#{p.id}</span>
           {kids.length > 0 && (
-            <span className="children-count">{kids.length}</span>
+            <span className="children-count">{countDescendants(p.id)}</span>
           )}
-          {(() => {
-            const total = kids.length > 0 ? countDescendants(p.id) : 0;
-            return total > kids.length ? (
-              <span className="children-count descendants-count">{total}</span>
-            ) : null;
-          })()}
           <span className="inline-flex items-center gap-1 ml-2">
             <Button
               size="sm"

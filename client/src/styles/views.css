@@ -41,7 +41,6 @@ li.node::before {
   font-size: 10px; color: var(--muted-color); background: var(--border-color);
   border-radius: 99px; padding: 1px 7px; letter-spacing: 0.5px;
 }
-.descendants-count { opacity: 0.6; }
 li.node.collapsed > ul { display: none; }
 li.node.match > .card {
   border-color: var(--olive-color); box-shadow: 0 0 0 2px hsl(var(--olive) / 0.25);
