@@ -4,10 +4,9 @@ import { usePeople } from "../hooks/usePeople";
 import { allRoots, flattenTree, nestPeople } from "../api/nest";
 import { useUIStore } from "../store/ui";
 import { DetailPanel } from "../components/DetailPanel";
+import { TreeSubHeaderSlot } from "../components/TreeSubHeaderSlot";
 import type { TreeNode } from "../types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import "../styles/views.css";
 
 function genderClass(g?: string | null) {
@@ -85,7 +84,6 @@ export function ListView() {
   const tree = useMemo(() => (people ? nestPeople(people) : null), [people]);
   const setSelectedId = useUIStore((s) => s.setSelectedPerson);
   const q = useUIStore((s) => s.searchQuery);
-  const setQ = useUIStore((s) => s.setSearchQuery);
 
   useEffect(() => {
     setSelectedId(null);
@@ -146,35 +144,26 @@ export function ListView() {
     );
   }
 
-  const peopleCount = Object.keys(byId).length;
-
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground">
-      <header className="shrink-0 z-10 flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur">
-        <Button asChild variant="outline" size="sm" className="uppercase tracking-widest">
-          <Link to={`/tree/${treeId}`}>← Views</Link>
-        </Button>
-        <h1 className="m-0 text-lg font-semibold text-primary uppercase tracking-[0.15em]">
-          ◆ Family Tree
-        </h1>
-        <Input
-          type="search"
-          placeholder="Search by name or ID..."
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          className="w-56"
-        />
-        <Button variant="outline" size="sm" onClick={expandAll} className="uppercase tracking-widest">
+    <>
+      <TreeSubHeaderSlot name="actions">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={expandAll}
+          className="uppercase tracking-widest"
+        >
           Expand all
         </Button>
-        <Button variant="outline" size="sm" onClick={collapseAll} className="uppercase tracking-widest">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={collapseAll}
+          className="uppercase tracking-widest"
+        >
           Collapse all
         </Button>
-        <span className="ml-auto text-xs text-muted-foreground tracking-widest">
-          {peopleCount} people · {roots.length} root line{roots.length === 1 ? "" : "s"}
-        </span>
-        <ThemeToggle />
-      </header>
+      </TreeSubHeaderSlot>
 
       <div className="flex-1 min-h-0 p-6 overflow-auto">
         <ul className="tree-list">
@@ -193,6 +182,6 @@ export function ListView() {
       </div>
 
       <DetailPanel />
-    </div>
+    </>
   );
 }
