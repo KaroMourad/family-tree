@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTreeContext } from "../tree/TreeContext";
 import type { Person } from "../types";
@@ -31,7 +31,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   ChevronDown,
-  ChevronUp,
   Download,
   Maximize2,
   Minimize2,
@@ -66,6 +65,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { DetailPanel } from "@/components/DetailPanel";
 import { TreeSubHeaderSlot } from "@/components/TreeSubHeaderSlot";
+import { useMatchNav, useRegisterMatchNav } from "@/components/MatchNav";
 import { toast } from "sonner";
 import "../styles/views.css";
 
@@ -355,7 +355,6 @@ export function Editor() {
   const renameTreeMutation = useRenameTree(treeId!);
   const deleteTreeMutation = useDeleteTree();
   const q = useUIStore((s) => s.searchQuery);
-  const setQ = useUIStore((s) => s.setSearchQuery);
   const setSelectedId = useUIStore((s) => s.setSelectedPerson);
   // Debounce the value the expensive search derivations read from. Typing
   // updates the input + store immediately (snappy text + ListView sync);
@@ -545,29 +544,14 @@ export function Editor() {
     return out;
   }, [matches, byParent, roots]);
 
-  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
-  // Whenever the set of matches changes, reset to the first match.
-  useEffect(() => {
-    setCurrentMatchIndex(0);
-  }, [matchedIds]);
-  // Scroll the currently-focused match into view.
-  useEffect(() => {
-    if (matchedIds.length === 0) return;
-    const id = matchedIds[currentMatchIndex];
-    if (!id) return;
+  // Scroll the matched <li> (id=`node-${id}`) into view. Stable identity so
+  // useRegisterMatchNav doesn't re-register every render.
+  const focusMatch = useCallback((id: string) => {
     const el = document.getElementById(`node-${id}`);
     if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
-  }, [matchedIds, currentMatchIndex]);
-
-  const currentMatchId = matchedIds[currentMatchIndex] ?? null;
-  const goPrevMatch = () => {
-    if (matchedIds.length === 0) return;
-    setCurrentMatchIndex((i) => (i - 1 + matchedIds.length) % matchedIds.length);
-  };
-  const goNextMatch = () => {
-    if (matchedIds.length === 0) return;
-    setCurrentMatchIndex((i) => (i + 1) % matchedIds.length);
-  };
+  }, []);
+  useRegisterMatchNav({ matchedIds, focusMatch });
+  const { currentId: currentMatchId } = useMatchNav();
 
   async function handleSave(data: FormState) {
     const { id: _omit, ...rest } = data as Record<string, unknown> as any;
@@ -766,34 +750,6 @@ export function Editor() {
         )}
       </TreeSubHeaderSlot>
       <TreeSubHeaderSlot name="actions">
-        {/* Match-navigation arrows + counter (editor-only) */}
-        {q && (
-          <div className="flex items-center gap-0.5">
-            <span className="px-1 text-[10px] tabular-nums text-muted-foreground tracking-widest">
-              {matchedIds.length === 0
-                ? "no match"
-                : `${currentMatchIndex + 1} / ${matchedIds.length}`}
-            </span>
-            <button
-              type="button"
-              aria-label="Previous match"
-              onClick={goPrevMatch}
-              disabled={matchedIds.length === 0}
-              className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-40 disabled:hover:bg-transparent"
-            >
-              <ChevronUp className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              aria-label="Next match"
-              onClick={goNextMatch}
-              disabled={matchedIds.length === 0}
-              className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-40 disabled:hover:bg-transparent"
-            >
-              <ChevronDown className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        )}
         {/* ⋯ actions menu */}
         <DropdownMenu>
           <DropdownMenuTrigger

@@ -5,6 +5,7 @@ import { allRoots, flattenTree, nestPeople } from "../api/nest";
 import { useUIStore } from "../store/ui";
 import { DetailPanel } from "../components/DetailPanel";
 import { TreeSubHeaderSlot } from "../components/TreeSubHeaderSlot";
+import { useMatchNav, useRegisterMatchNav } from "../components/MatchNav";
 import type { TreeNode } from "../types";
 import { Button } from "@/components/ui/button";
 import "../styles/views.css";
@@ -34,17 +35,29 @@ type NodeProps = {
   node: TreeNode;
   isOpen: boolean;
   match: Set<string>;
+  currentMatchId: string | null;
   isOpenFor: (id: string) => boolean;
   onSelect: (id: string) => void;
   onToggle: (id: string) => void;
 };
 
-function ListNode({ node, isOpen, match, isOpenFor, onSelect, onToggle }: NodeProps) {
+function ListNode({
+  node,
+  isOpen,
+  match,
+  currentMatchId,
+  isOpenFor,
+  onSelect,
+  onToggle,
+}: NodeProps) {
   const hasKids = node.children.length > 0;
   const cls = ["card", genderClass(node.gender)];
   if (isDeceased(node.deceased)) cls.push("deceased");
   return (
-    <li className={`node${!isOpen && hasKids ? " collapsed" : ""}${match.has(node.id) ? " match" : ""}`}>
+    <li
+      id={`node-${node.id}`}
+      className={`node${!isOpen && hasKids ? " collapsed" : ""}${match.has(node.id) ? " match" : ""}${currentMatchId === node.id ? " current-match" : ""}`}
+    >
       <span className={cls.join(" ")} onClick={() => onSelect(node.id)}>
         <span
           className={`toggle${hasKids ? "" : " empty"}`}
@@ -67,6 +80,7 @@ function ListNode({ node, isOpen, match, isOpenFor, onSelect, onToggle }: NodePr
               node={c}
               isOpen={isOpenFor(c.id)}
               match={match}
+              currentMatchId={currentMatchId}
               isOpenFor={isOpenFor}
               onSelect={onSelect}
               onToggle={onToggle}
@@ -133,6 +147,28 @@ export function ListView() {
     return set;
   }, [q, byId]);
 
+  // Match ids in pre-order traversal (display order) so up/down navigation
+  // goes top-to-bottom through the rendered tree.
+  const matchedIds = useMemo(() => {
+    const out: string[] = [];
+    if (matches.size === 0) return out;
+    const walk = (nodes: TreeNode[]) => {
+      for (const n of nodes) {
+        if (matches.has(n.id)) out.push(n.id);
+        if (n.children?.length) walk(n.children);
+      }
+    };
+    walk(roots);
+    return out;
+  }, [matches, roots]);
+
+  const focusMatch = useCallback((id: string) => {
+    const el = document.getElementById(`node-${id}`);
+    if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, []);
+  useRegisterMatchNav({ matchedIds, focusMatch });
+  const { currentId: currentMatchId } = useMatchNav();
+
   if (loading) return <div className="p-10">Loading…</div>;
   if (error) return <div className="p-10 text-destructive">Error: {error.message}</div>;
   if (Array.isArray(tree) && tree.length === 0) {
@@ -173,6 +209,7 @@ export function ListView() {
               node={r}
               isOpen={isOpenFor(r.id)}
               match={matches}
+              currentMatchId={currentMatchId}
               isOpenFor={isOpenFor}
               onSelect={setSelectedId}
               onToggle={toggleId}

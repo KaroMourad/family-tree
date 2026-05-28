@@ -1,7 +1,7 @@
 import { Link, Outlet, useMatch, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronRight, Search, X } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronUp, Search, X } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { useTreeContext } from "../tree/TreeContext";
 import { usePeople } from "../hooks/usePeople";
@@ -11,6 +11,7 @@ import {
   TreeSubHeaderSlotProvider,
   useTreeSubHeaderSlots,
 } from "./TreeSubHeaderSlot";
+import { MatchNavProvider, useMatchNav } from "./MatchNav";
 
 /**
  * Shared chrome for every tree-scoped route. Renders two rows:
@@ -36,42 +37,44 @@ export function TreeLayout() {
   const viewLabel = useCurrentViewLabel();
 
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground">
-      <div className="shrink-0 z-10 border-b border-border bg-background/90 backdrop-blur">
-        {/* Global header */}
-        <header className="flex flex-wrap items-center gap-3 px-4 sm:px-6 py-3">
-          <Breadcrumb
-            treeId={treeId!}
-            treeName={tree.name}
-            viewLabel={isChooser ? null : viewLabel}
-          />
-          <SearchField q={q} setQ={setQ} className="ml-auto" />
-          <span className="hidden md:inline text-xs text-muted-foreground tracking-widest truncate">
-            {people.length} people
-            <span className="hidden lg:inline">
-              {" "}
-              · {user?.email} ({user?.role})
+    <MatchNavProvider>
+      <div className="flex flex-col h-screen bg-background text-foreground">
+        <div className="shrink-0 z-10 border-b border-border bg-background/90 backdrop-blur">
+          {/* Global header */}
+          <header className="flex flex-wrap items-center gap-3 px-4 sm:px-6 py-3">
+            <Breadcrumb
+              treeId={treeId!}
+              treeName={tree.name}
+              viewLabel={isChooser ? null : viewLabel}
+            />
+            <SearchField q={q} setQ={setQ} className="ml-auto" />
+            <span className="hidden md:inline text-xs text-muted-foreground tracking-widest truncate">
+              {people.length} people
+              <span className="hidden lg:inline">
+                {" "}
+                · {user?.email} ({user?.role})
+              </span>
             </span>
-          </span>
-          <Button size="sm" variant="outline" onClick={logout}>
-            Logout
-          </Button>
-          <ThemeToggle />
-        </header>
-        {/* Tree sub-header */}
-        {!isChooser && (
-          <TreeSubHeaderRow
-            titleSlot={slots.title}
-            actionsSlot={slots.actions}
-            treeName={tree.name}
-          />
-        )}
-      </div>
+            <Button size="sm" variant="outline" onClick={logout}>
+              Logout
+            </Button>
+            <ThemeToggle />
+          </header>
+          {/* Tree sub-header */}
+          {!isChooser && (
+            <TreeSubHeaderRow
+              titleSlot={slots.title}
+              actionsSlot={slots.actions}
+              treeName={tree.name}
+            />
+          )}
+        </div>
 
-      <TreeSubHeaderSlotProvider onContentChange={setSlot}>
-        <Outlet />
-      </TreeSubHeaderSlotProvider>
-    </div>
+        <TreeSubHeaderSlotProvider onContentChange={setSlot}>
+          <Outlet />
+        </TreeSubHeaderSlotProvider>
+      </div>
+    </MatchNavProvider>
   );
 }
 
@@ -166,6 +169,7 @@ function SearchField({
   setQ: (s: string) => void;
   className?: string;
 }) {
+  const { total, currentIndex, goPrev, goNext } = useMatchNav();
   return (
     <div className={`relative flex-1 max-w-sm min-w-0 ${className ?? ""}`}>
       <Search className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -175,22 +179,49 @@ function SearchField({
         value={q}
         onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Escape" && q) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            if (e.shiftKey) goPrev();
+            else goNext();
+          } else if (e.key === "Escape" && q) {
             e.preventDefault();
             setQ("");
           }
         }}
-        className={`pl-8 h-8 ${q ? "pr-8" : "pr-3"}`}
+        className={`pl-8 h-8 ${q ? "pr-28" : "pr-3"}`}
       />
       {q && (
-        <button
-          type="button"
-          aria-label="Clear search"
-          onClick={() => setQ("")}
-          className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
+        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+          <span className="px-1 text-[10px] tabular-nums text-muted-foreground tracking-widest">
+            {total === 0 ? "no match" : `${currentIndex + 1} / ${total}`}
+          </span>
+          <button
+            type="button"
+            aria-label="Previous match"
+            onClick={goPrev}
+            disabled={total === 0}
+            className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+          >
+            <ChevronUp className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            aria-label="Next match"
+            onClick={goNext}
+            disabled={total === 0}
+            className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+          >
+            <ChevronDown className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            aria-label="Clear search"
+            onClick={() => setQ("")}
+            className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
       )}
     </div>
   );

@@ -6,6 +6,7 @@ import { firstRoot, flattenTree, nestPeople } from "../api/nest";
 import { useUIStore } from "../store/ui";
 import { DetailPanel } from "../components/DetailPanel";
 import { TreeSubHeaderSlot } from "../components/TreeSubHeaderSlot";
+import { useRegisterMatchNav } from "../components/MatchNav";
 import type { TreeNode } from "../types";
 import { Button } from "@/components/ui/button";
 import "../styles/views.css";
@@ -38,6 +39,25 @@ export function ChartView() {
   const [orientation, setOrientation] = useState<"vertical" | "horizontal">("vertical");
   const setSelectedId = useUIStore((s) => s.setSelectedPerson);
   const q = useUIStore((s) => s.searchQuery);
+
+  // Match ids in pre-order traversal (display order). Match rule mirrors
+  // ListView/Editor so the counter agrees across views.
+  const matchedIds = useMemo(() => {
+    const out: string[] = [];
+    const term = q.trim().toLowerCase();
+    if (!term || !root) return out;
+    const walk = (n: TreeNode) => {
+      const hay = `${n.name} ${n.nickname ?? ""} ${n.id} ${n.surnameNow ?? ""} ${n.surnameBirth ?? ""}`.toLowerCase();
+      if (hay.includes(term)) out.push(n.id);
+      n.children?.forEach(walk);
+    };
+    walk(root);
+    return out;
+  }, [q, root]);
+  // Phase A: register matched ids so the global counter + arrows show the
+  // right total. focusMatch is a no-op for now; SVG pan/zoom comes in
+  // Phase B (this view already auto-pans to the first match on q change).
+  useRegisterMatchNav({ matchedIds });
 
   useEffect(() => {
     setSelectedId(null);
