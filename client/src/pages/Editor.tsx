@@ -38,7 +38,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Collapsible,
@@ -688,67 +687,11 @@ export function Editor() {
           >
             + Root person
           </Button>
-          {/* Desktop (≥sm): inline view + management controls */}
-          <div className="hidden sm:flex items-center gap-3">
-            <Separator orientation="vertical" className="mx-1" />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={expandAll}
-              className="uppercase tracking-widest"
-            >
-              <Maximize2 /> Expand all
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={collapseAll}
-              className="uppercase tracking-widest"
-            >
-              <Minimize2 /> Collapse all
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className={buttonVariants({
-                  variant: "outline",
-                  size: "sm",
-                  className: "uppercase tracking-widest",
-                })}
-              >
-                Manage <ChevronDown className="h-4 w-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuItem onSelect={handleExport}>
-                  Export JSON
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() => fileInputRef.current?.click()}
-                >
-                  Import JSON
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  onSelect={() => {
-                    setDeleteTreeOpen(true);
-                    setDeleteTreeName("");
-                    setDeleteTreeError(null);
-                  }}
-                >
-                  Delete tree
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-          {/* Mobile (<sm): everything collapsed into a single ⋯ menu */}
+          {/* Single ⋯ actions menu (same on desktop and mobile) */}
           <DropdownMenu>
             <DropdownMenuTrigger
               aria-label="More actions"
-              className={buttonVariants({
-                variant: "outline",
-                size: "icon-sm",
-                className: "sm:hidden",
-              })}
+              className={buttonVariants({ variant: "outline", size: "icon-sm" })}
             >
               <MoreHorizontal />
             </DropdownMenuTrigger>
