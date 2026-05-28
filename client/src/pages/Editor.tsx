@@ -552,23 +552,11 @@ export function Editor() {
           <Button size="sm" onClick={() => setEditorState({ mode: "create", person: emptyForm(null) })} className="ml-auto uppercase tracking-widest">
             + Root person
           </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={expandAll}
-            aria-label="Expand all"
-            title="Expand all"
-          >
-            <Maximize2 />
+          <Button variant="ghost" size="sm" onClick={expandAll} className="uppercase tracking-widest">
+            <Maximize2 /> Expand all
           </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={collapseAll}
-            aria-label="Collapse all"
-            title="Collapse all"
-          >
-            <Minimize2 />
+          <Button variant="ghost" size="sm" onClick={collapseAll} className="uppercase tracking-widest">
+            <Minimize2 /> Collapse all
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger
