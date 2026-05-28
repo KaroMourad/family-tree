@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Maximize2, Minimize2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -552,10 +552,10 @@ export function Editor() {
               {/* preventDefault keeps the View menu open so the user can toggle
                   expand/collapse repeatedly; they close it with Esc or click-away. */}
               <DropdownMenuItem onSelect={(e) => { e.preventDefault(); expandAll(); }}>
-                Expand all
+                <Maximize2 /> Expand all
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={(e) => { e.preventDefault(); collapseAll(); }}>
-                Collapse all
+                <Minimize2 /> Collapse all
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
