@@ -1,7 +1,7 @@
 import { Link, Outlet, useMatch, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, X } from "lucide-react";
+import { ChevronRight, Search, X } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { useTreeContext } from "../tree/TreeContext";
 import { usePeople } from "../hooks/usePeople";
@@ -33,20 +33,18 @@ export function TreeLayout() {
   // The chooser route (/tree/:treeId, no extra segment) is a landing page;
   // hide the sub-header there. All other tree routes get the sub-header.
   const isChooser = useMatch("/tree/:treeId");
+  const viewLabel = useCurrentViewLabel();
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       <div className="shrink-0 z-10 border-b border-border bg-background/90 backdrop-blur">
         {/* Global header */}
         <header className="flex flex-wrap items-center gap-3 px-4 sm:px-6 py-3">
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className="uppercase tracking-widest"
-          >
-            <Link to="/">← Trees</Link>
-          </Button>
+          <Breadcrumb
+            treeId={treeId!}
+            treeName={tree.name}
+            viewLabel={isChooser ? null : viewLabel}
+          />
           <span className="ml-auto text-xs text-muted-foreground tracking-widest truncate">
             {people.length} people
             <span className="hidden sm:inline">
@@ -75,6 +73,67 @@ export function TreeLayout() {
         <Outlet />
       </TreeSubHeaderSlotProvider>
     </div>
+  );
+}
+
+// Map from the URL view segment to the breadcrumb label shown to the user.
+// Keep in sync with the route paths in App.tsx and the cards in TreeChooser.
+const VIEW_LABELS: Record<string, string> = {
+  list: "Indented List",
+  chart: "Genealogical Chart",
+  illustrated: "Illustrated Tree",
+  compact: "Compact Illustrated",
+  editor: "Editor",
+};
+
+function useCurrentViewLabel(): string | null {
+  const m = useMatch("/tree/:treeId/:view");
+  const view = m?.params.view;
+  return (view && VIEW_LABELS[view]) ?? null;
+}
+
+function Breadcrumb({
+  treeId,
+  treeName,
+  viewLabel,
+}: {
+  treeId: string;
+  treeName: string;
+  viewLabel: string | null;
+}) {
+  const linkCls =
+    "text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors truncate";
+  const sepCls = "h-3.5 w-3.5 text-muted-foreground shrink-0";
+  return (
+    <nav aria-label="Breadcrumb" className="flex items-center gap-2 min-w-0">
+      <Link to="/" className={linkCls}>
+        Trees
+      </Link>
+      <ChevronRight className={sepCls} aria-hidden="true" />
+      {viewLabel ? (
+        <Link to={`/tree/${treeId}`} className={linkCls}>
+          {treeName}
+        </Link>
+      ) : (
+        <span
+          className="text-xs uppercase tracking-widest text-foreground font-medium truncate"
+          aria-current="page"
+        >
+          {treeName}
+        </span>
+      )}
+      {viewLabel && (
+        <>
+          <ChevronRight className={sepCls} aria-hidden="true" />
+          <span
+            className="text-xs uppercase tracking-widest text-foreground font-medium truncate"
+            aria-current="page"
+          >
+            {viewLabel}
+          </span>
+        </>
+      )}
+    </nav>
   );
 }
 
