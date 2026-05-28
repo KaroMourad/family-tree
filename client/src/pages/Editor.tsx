@@ -30,7 +30,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronDown, Maximize2, Minimize2, MoreHorizontal } from "lucide-react";
+import {
+  ChevronDown,
+  Download,
+  Maximize2,
+  Minimize2,
+  MoreHorizontal,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -714,10 +722,10 @@ export function Editor() {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={handleExport}>
-                Export JSON
+                <Download /> Export JSON
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => fileInputRef.current?.click()}>
-                Import JSON
+                <Upload /> Import JSON
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -728,7 +736,7 @@ export function Editor() {
                   setDeleteTreeError(null);
                 }}
               >
-                Delete tree
+                <Trash2 /> Delete tree
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
