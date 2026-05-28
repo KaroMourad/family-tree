@@ -68,6 +68,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { DetailPanel } from "@/components/DetailPanel";
 import { toast } from "sonner";
 import "../styles/views.css";
 
@@ -359,6 +360,7 @@ export function Editor() {
   const deleteTreeMutation = useDeleteTree();
   const q = useUIStore((s) => s.searchQuery);
   const setQ = useUIStore((s) => s.setSearchQuery);
+  const setSelectedId = useUIStore((s) => s.setSelectedPerson);
   const importTreeMutation = useImportTree(treeId!);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingImport, setPendingImport] = useState<{
@@ -626,10 +628,24 @@ export function Editor() {
         id={`node-${p.id}`}
         className={`node${!isOpen && kids.length > 0 ? " collapsed" : ""}${matches.has(p.id) ? " match" : ""}${currentMatchId === p.id ? " current-match" : ""}`}
       >
-        <span className={cls.join(" ")}>
+        <span
+          className={`${cls.join(" ")} cursor-pointer`}
+          role="button"
+          tabIndex={0}
+          onClick={() => setSelectedId(p.id)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setSelectedId(p.id);
+            }
+          }}
+        >
           <span
             className={`toggle${kids.length === 0 ? " empty" : ""}`}
-            onClick={() => kids.length > 0 && toggleNode(p.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (kids.length > 0) toggleNode(p.id);
+            }}
           >
             {kids.length === 0 ? "·" : isOpen ? "−" : "+"}
           </span>
@@ -649,9 +665,10 @@ export function Editor() {
               size="sm"
               variant="ghost"
               className="h-6 px-2 text-[10px] text-primary uppercase tracking-widest hover:bg-primary/15"
-              onClick={() =>
-                setEditorState({ mode: "create", person: emptyForm(p.id) })
-              }
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditorState({ mode: "create", person: emptyForm(p.id) });
+              }}
               title="Add child"
             >
               + Child
@@ -660,13 +677,14 @@ export function Editor() {
               size="sm"
               variant="ghost"
               className="h-6 px-2 text-[10px] uppercase tracking-widest"
-              onClick={() =>
+              onClick={(e) => {
+                e.stopPropagation();
                 setEditorState({
                   mode: "edit",
                   person: { ...(p as any), name: p.name },
                   id: p.id,
-                })
-              }
+                });
+              }}
             >
               Edit
             </Button>
@@ -674,7 +692,8 @@ export function Editor() {
               size="sm"
               variant="ghost"
               className="h-6 px-2 text-[10px] text-destructive uppercase tracking-widest hover:bg-destructive/15"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 setDeleteTarget(p);
                 setDeleteError(null);
               }}
@@ -898,6 +917,29 @@ export function Editor() {
       <div className="flex-1 min-h-0 p-6 overflow-auto">
         <ul className="tree-list">{roots.map((r) => renderNode(r, 0))}</ul>
       </div>
+
+      <DetailPanel
+        actions={{
+          onEdit: (node) => {
+            const person = people.find((x) => x.id === node.id);
+            if (!person) return;
+            setEditorState({
+              mode: "edit",
+              person: { ...(person as any), name: person.name },
+              id: person.id,
+            });
+          },
+          onAddChild: (node) => {
+            setEditorState({ mode: "create", person: emptyForm(node.id) });
+          },
+          onDelete: (node) => {
+            const person = people.find((x) => x.id === node.id);
+            if (!person) return;
+            setDeleteTarget(person);
+            setDeleteError(null);
+          },
+        }}
+      />
 
       <PersonForm
         key={
