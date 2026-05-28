@@ -36,10 +36,13 @@ import {
   Maximize2,
   Minimize2,
   MoreHorizontal,
+  Search,
   Trash2,
   Upload,
   UserPlus,
+  X,
 } from "lucide-react";
+import { useUIStore } from "../store/ui";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -353,6 +356,8 @@ export function Editor() {
   const deletePersonMutation = useDeletePerson(treeId!);
   const renameTreeMutation = useRenameTree(treeId!);
   const deleteTreeMutation = useDeleteTree();
+  const q = useUIStore((s) => s.searchQuery);
+  const setQ = useUIStore((s) => s.setSearchQuery);
   const importTreeMutation = useImportTree(treeId!);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingImport, setPendingImport] = useState<{
@@ -475,15 +480,44 @@ export function Editor() {
     setRenaming(false);
   }
 
-  const { roots, byParent } = useMemo(() => {
+  const { roots, byParent, parentOf } = useMemo(() => {
     const byParent = new Map<string | null, Person[]>();
+    const parentOf = new Map<string, string | null>();
     for (const p of people) {
       const list = byParent.get(p.parentId) ?? [];
       list.push(p);
       byParent.set(p.parentId, list);
+      parentOf.set(p.id, p.parentId);
     }
-    return { roots: byParent.get(null) ?? [], byParent };
+    return { roots: byParent.get(null) ?? [], byParent, parentOf };
   }, [people]);
+
+  // Substring match across name, nickname, id, and surnames — same rule as ListView.
+  const matches = useMemo(() => {
+    const set = new Set<string>();
+    const term = q.trim().toLowerCase();
+    if (!term) return set;
+    for (const p of people) {
+      const hay = `${p.name} ${p.nickname ?? ""} ${p.id} ${p.surnameNow ?? ""} ${p.surnameBirth ?? ""}`.toLowerCase();
+      if (hay.includes(term)) set.add(p.id);
+    }
+    return set;
+  }, [q, people]);
+
+  // While a query is active, force every ancestor of every match open so the
+  // matching nodes are visible (they may otherwise be inside collapsed branches).
+  const ancestorsOfMatches = useMemo(() => {
+    const set = new Set<string>();
+    if (matches.size === 0) return set;
+    for (const id of matches) {
+      let p = parentOf.get(id) ?? null;
+      while (p && !set.has(p)) {
+        set.add(p);
+        p = parentOf.get(p) ?? null;
+      }
+    }
+    return set;
+  }, [matches, parentOf]);
 
   async function handleSave(data: FormState) {
     const { id: _omit, ...rest } = data as Record<string, unknown> as any;
@@ -528,8 +562,13 @@ export function Editor() {
     setDefaultOpen(false);
     setOpenIds(new Set());
   }
-  const isNodeOpen = (id: string) =>
-    openIds.has(id) ? !defaultOpen : defaultOpen;
+  const isNodeOpen = (id: string) => {
+    // While searching, ancestors of matches are forced open so matches are
+    // visible. Clearing the query restores the user's previous toggle state
+    // verbatim because we don't mutate openIds/defaultOpen here.
+    if (ancestorsOfMatches.has(id)) return true;
+    return openIds.has(id) ? !defaultOpen : defaultOpen;
+  };
 
   function countDescendants(id: string): number {
     const kids = byParent.get(id) ?? [];
@@ -543,7 +582,7 @@ export function Editor() {
     return (
       <li
         key={p.id}
-        className={`node${!isOpen && kids.length > 0 ? " collapsed" : ""}`}
+        className={`node${!isOpen && kids.length > 0 ? " collapsed" : ""}${matches.has(p.id) ? " match" : ""}`}
       >
         <span className={cls.join(" ")}>
           <span
@@ -680,6 +719,27 @@ export function Editor() {
               ◆ {treeName} ✎
             </h1>
           )}
+          {/* Search: by name, nickname, id, or surname */}
+          <div className="ml-auto relative flex-1 max-w-sm min-w-0">
+            <Search className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search by name or ID…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="pl-8 pr-8 h-8"
+            />
+            {q && (
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={() => setQ("")}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
           {/* Single ⋯ actions menu (same on desktop and mobile) */}
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -687,7 +747,6 @@ export function Editor() {
               className={buttonVariants({
                 variant: "outline",
                 size: "icon-sm",
-                className: "ml-auto",
               })}
             >
               <MoreHorizontal />
