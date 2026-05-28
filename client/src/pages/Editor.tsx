@@ -363,11 +363,11 @@ export function Editor() {
   const setSelectedId = useUIStore((s) => s.setSelectedPerson);
   // Debounce the value the expensive search derivations read from. Typing
   // updates the input + store immediately (snappy text + ListView sync);
-  // matches / auto-expand / scroll-into-view only fire ~250ms after you stop.
+  // matches / auto-expand / scroll-into-view only fire ~500ms after you stop.
   const [debouncedQ, setDebouncedQ] = useState(q);
   useEffect(() => {
     if (q === debouncedQ) return;
-    const t = setTimeout(() => setDebouncedQ(q), 250);
+    const t = setTimeout(() => setDebouncedQ(q), 500);
     return () => clearTimeout(t);
   }, [q, debouncedQ]);
   const importTreeMutation = useImportTree(treeId!);
