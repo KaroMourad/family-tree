@@ -542,23 +542,24 @@ export function Editor() {
           <Button size="sm" onClick={() => setEditorState({ mode: "create", person: emptyForm(null) })} className="uppercase tracking-widest">
             + Root person
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className={buttonVariants({ variant: "outline", size: "sm", className: "uppercase tracking-widest" })}
-            >
-              View <ChevronDown className="h-4 w-4" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {/* preventDefault keeps the View menu open so the user can toggle
-                  expand/collapse repeatedly; they close it with Esc or click-away. */}
-              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); expandAll(); }}>
-                <Maximize2 /> Expand all
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); collapseAll(); }}>
-                <Minimize2 /> Collapse all
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={expandAll}
+            aria-label="Expand all"
+            title="Expand all"
+          >
+            <Maximize2 />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={collapseAll}
+            aria-label="Collapse all"
+            title="Collapse all"
+          >
+            <Minimize2 />
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger
               className={buttonVariants({ variant: "outline", size: "sm", className: "uppercase tracking-widest" })}
