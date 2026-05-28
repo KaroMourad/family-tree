@@ -549,7 +549,7 @@ export function Editor() {
               ◆ {treeName} ✎
             </h1>
           )}
-          <Button size="sm" onClick={() => setEditorState({ mode: "create", person: emptyForm(null) })} className="uppercase tracking-widest">
+          <Button size="sm" onClick={() => setEditorState({ mode: "create", person: emptyForm(null) })} className="ml-auto uppercase tracking-widest">
             + Root person
           </Button>
           <Button
