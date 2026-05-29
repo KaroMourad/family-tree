@@ -9,12 +9,14 @@
 # We do not run `corepack enable` because Render's build image has corepack
 # pre-installed system-wide in a read-only path; `enable` errors with EROFS.
 # pnpm is resolved via the root package.json's "packageManager" field.
+version: "1"
 services:
   - type: web
     name: family-tree-api
     runtime: node
     plan: free
     region: frankfurt
+    autoDeployTrigger: commit
     buildCommand: npm install -g pnpm@11.3.0 && pnpm install --frozen-lockfile && pnpm --filter @family-tree/server prisma:generate && pnpm --filter @family-tree/server build
     startCommand: pnpm --filter @family-tree/server prisma:deploy && pnpm --filter @family-tree/server start
     healthCheckPath: /api/health
@@ -31,6 +33,7 @@ services:
   - type: web
     name: family-tree-web
     runtime: static
+    autoDeployTrigger: commit
     buildCommand: npm install -g pnpm@11.3.0 && pnpm install --frozen-lockfile && pnpm --filter @family-tree/client build
     staticPublishPath: client/dist
     envVars:
