@@ -31,7 +31,6 @@ services:
   - type: web
     name: family-tree-web
     runtime: static
-    region: frankfurt
     buildCommand: npm install -g pnpm@11.3.0 && pnpm install --frozen-lockfile && pnpm --filter @family-tree/client build
     staticPublishPath: client/dist
     envVars:
