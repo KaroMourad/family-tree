@@ -261,6 +261,15 @@ export function CompactView() {
     );
   }
 
+  // When the search query is cleared (non-empty -> empty), restore the default
+  // fit-to-screen view so the viewport isn't stranded on a now-irrelevant match.
+  const wasSearchingRef = useRef(false);
+  useEffect(() => {
+    const hasQuery = q.trim().length > 0;
+    if (wasSearchingRef.current && !hasQuery) fit();
+    wasSearchingRef.current = hasQuery;
+  }, [q]);
+
   if (loading) return <div className="p-10">Loading…</div>;
   if (error) return <div className="p-10 text-destructive">Error: {error.message}</div>;
   if (Array.isArray(tree) && tree.length === 0) {
