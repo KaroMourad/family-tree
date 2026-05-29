@@ -33,15 +33,25 @@ li.node::before {
 .toggle.empty { visibility: hidden; }
 .name {
   font-weight: 600; color: var(--ink-color);
-  letter-spacing: 1px; text-transform: uppercase; font-size: 13px;
+  letter-spacing: 1px; text-transform: capitalize; font-size: 13px;
 }
 .meta { font-size: 11px; color: var(--muted-color); letter-spacing: 1px; }
-.id-tag { font-size: 10px; color: var(--muted-color); letter-spacing: 1px; }
+.children-count {
+  font-size: 10px; color: var(--muted-color); background: var(--border-color);
+  border-radius: 99px; padding: 1px 7px; letter-spacing: 0.5px;
+}
 li.node.collapsed > ul { display: none; }
 li.node.match > .card {
-  border-color: var(--olive-color); box-shadow: 0 0 0 2px hsl(var(--olive) / 0.25);
+  border-color: var(--olive-color); border-width: 2px;
+  background: hsl(var(--olive) / 0.12);
+  box-shadow: 0 0 0 2px hsl(var(--olive) / 0.35);
 }
-li.node.match > .card .name { color: var(--olive-color); }
+li.node.match > .card .name { color: var(--olive-color); font-weight: 600; }
+/* The currently-focused match while navigating with up/down arrows. */
+li.node.current-match > .card {
+  background: hsl(var(--olive) / 0.25);
+  box-shadow: 0 0 0 3px hsl(var(--olive) / 0.55);
+}
 
 /* Chart / illustrated SVG views */
 .chart .link { fill: none; stroke: var(--ink-color); stroke-width: 1.4px; opacity: 0.7; }

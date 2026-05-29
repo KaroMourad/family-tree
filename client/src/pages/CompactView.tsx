@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import * as d3 from "d3";
 import { usePeople } from "../hooks/usePeople";
 import { firstRoot, flattenTree, nestPeople } from "../api/nest";
 import { useUIStore } from "../store/ui";
 import { DetailPanel } from "../components/DetailPanel";
+import { TreeSubHeaderSlot } from "../components/TreeSubHeaderSlot";
+import { useRegisterMatchNav } from "../components/MatchNav";
+import { SearchField } from "../components/SearchField";
 import type { TreeNode } from "../types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import "../styles/views.css";
 
 const TAG_H = 22;
@@ -45,7 +46,50 @@ export function CompactView() {
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
   const setSelectedId = useUIStore((s) => s.setSelectedPerson);
   const q = useUIStore((s) => s.searchQuery);
-  const setQ = useUIStore((s) => s.setSearchQuery);
+
+  // Match ids in pre-order traversal (display order). Match rule mirrors
+  // ListView/Editor so the counter agrees across views.
+  const matchedIds = useMemo(() => {
+    const out: string[] = [];
+    const term = q.trim().toLowerCase();
+    if (!term || !root) return out;
+    const walk = (n: TreeNode) => {
+      const hay = `${n.name} ${n.nickname ?? ""} ${n.id} ${n.surnameNow ?? ""} ${n.surnameBirth ?? ""}`.toLowerCase();
+      if (hay.includes(term)) out.push(n.id);
+      n.children?.forEach(walk);
+    };
+    walk(root);
+    return out;
+  }, [q, root]);
+  // Pan/zoom the SVG to center the matched name-tag. Looks up the rendered
+  // element by data-id, reads layout coordinates from its datum (.X / .Y),
+  // and applies a centering transform. Bails silently if not in the DOM yet.
+  const focusMatch = useCallback((id: string) => {
+    const svgEl = svgRef.current;
+    const gEl = gRef.current;
+    const zoom = zoomRef.current;
+    if (!svgEl || !gEl || !zoom) return;
+    const nodeEl = gEl.querySelector<SVGGElement>(
+      `g.name-tag[data-id="${CSS.escape(id)}"]`,
+    );
+    if (!nodeEl) return;
+    const datum = d3.select(nodeEl).datum() as { X?: number; Y?: number };
+    if (typeof datum?.X !== "number" || typeof datum?.Y !== "number") return;
+    const w = svgEl.clientWidth;
+    const h = svgEl.clientHeight;
+    const cur = d3.zoomTransform(svgEl);
+    const scale = Math.max(cur.k, 1.2);
+    d3.select(svgEl)
+      .transition()
+      .duration(500)
+      .call(
+        zoom.transform,
+        d3.zoomIdentity
+          .translate(w / 2 - scale * datum.X, h / 2 - scale * datum.Y)
+          .scale(scale),
+      );
+  }, []);
+  useRegisterMatchNav({ matchedIds, focusMatch });
 
   useEffect(() => {
     setSelectedId(null);
@@ -202,33 +246,16 @@ export function CompactView() {
     svg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
   }, [root]);
 
-  // search
+  // Drive .match class on g.name-tag from the canonical matchedIds set so the
+  // highlighted tags match the counter exactly. Pan-to-current-match is
+  // handled by MatchNav via focusMatch.
   useEffect(() => {
     if (!gRef.current) return;
-    const term = q.trim().toLowerCase();
-    d3.select(gRef.current).selectAll<SVGGElement, d3.HierarchyNode<TreeNode>>("g.name-tag").classed("match", false);
-    if (!term) return;
-    let first: { x: number; y: number } | null = null;
+    const matchSet = new Set(matchedIds);
     d3.select(gRef.current)
       .selectAll<SVGGElement, d3.HierarchyNode<TreeNode>>("g.name-tag")
-      .each(function (d: any) {
-        const hay = (d.data.name + " " + d.data.id).toLowerCase();
-        if (hay.includes(term)) {
-          d3.select(this).classed("match", true);
-          if (!first) first = { x: d.X, y: d.Y };
-        }
-      });
-    if (first && svgRef.current && zoomRef.current) {
-      const f = first as { x: number; y: number };
-      const w = svgRef.current.clientWidth, h = svgRef.current.clientHeight;
-      const cur = d3.zoomTransform(svgRef.current);
-      const scale = Math.max(cur.k, 1.2);
-      d3.select(svgRef.current).transition().duration(500).call(
-        zoomRef.current.transform,
-        d3.zoomIdentity.translate(w / 2 - scale * f.x, h / 2 - scale * f.y).scale(scale),
-      );
-    }
-  }, [q]);
+      .classed("match", (d) => matchSet.has(d.data.id));
+  }, [matchedIds]);
 
   function fit() {
     if (!gRef.current || !svgRef.current || !zoomRef.current) return;
@@ -244,6 +271,15 @@ export function CompactView() {
     );
   }
 
+  // When the search query is cleared (non-empty -> empty), restore the default
+  // fit-to-screen view so the viewport isn't stranded on a now-irrelevant match.
+  const wasSearchingRef = useRef(false);
+  useEffect(() => {
+    const hasQuery = q.trim().length > 0;
+    if (wasSearchingRef.current && !hasQuery) fit();
+    wasSearchingRef.current = hasQuery;
+  }, [q]);
+
   if (loading) return <div className="p-10">Loading…</div>;
   if (error) return <div className="p-10 text-destructive">Error: {error.message}</div>;
   if (Array.isArray(tree) && tree.length === 0) {
@@ -258,31 +294,51 @@ export function CompactView() {
 
 
   return (
-    <div className="compact flex flex-col h-screen overflow-hidden bg-background text-foreground">
-      <header className="shrink-0 z-10 flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur">
-        <Button asChild variant="outline" size="sm" className="uppercase tracking-widest">
-          <Link to={`/tree/${treeId}`}>← Views</Link>
+    <>
+      <TreeSubHeaderSlot name="actions">
+        <SearchField />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={fit}
+          className="uppercase tracking-widest"
+        >
+          Fit
         </Button>
-        <h1 className="m-0 text-lg font-semibold text-primary uppercase tracking-[0.15em]">
-          ◆ Compact Illustrated
-        </h1>
-        <Input
-          type="search"
-          placeholder="Search by name..."
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          className="w-56"
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() =>
+            zoomRef.current &&
+            d3
+              .select(svgRef.current!)
+              .transition()
+              .call(zoomRef.current.scaleBy as any, 1.3)
+          }
+        >
+          +
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() =>
+            zoomRef.current &&
+            d3
+              .select(svgRef.current!)
+              .transition()
+              .call(zoomRef.current.scaleBy as any, 1 / 1.3)
+          }
+        >
+          −
+        </Button>
+      </TreeSubHeaderSlot>
+      <div className="compact flex-1 min-h-0 relative overflow-hidden">
+        <svg
+          ref={svgRef}
+          className="block w-full h-full cursor-grab active:cursor-grabbing bg-background"
         />
-        <Button variant="outline" size="sm" onClick={fit} className="uppercase tracking-widest">Fit</Button>
-        <Button variant="outline" size="sm" onClick={() => zoomRef.current && d3.select(svgRef.current!).transition().call(zoomRef.current.scaleBy as any, 1.3)}>+</Button>
-        <Button variant="outline" size="sm" onClick={() => zoomRef.current && d3.select(svgRef.current!).transition().call(zoomRef.current.scaleBy as any, 1 / 1.3)}>−</Button>
-        <span className="ml-auto text-xs text-muted-foreground tracking-widest">{Object.keys(byId).length} members</span>
-        <ThemeToggle />
-      </header>
-      <div className="flex-1 min-h-0 relative overflow-hidden">
-        <svg ref={svgRef} className="block w-full h-full cursor-grab active:cursor-grabbing bg-background" />
       </div>
       <DetailPanel />
-    </div>
+    </>
   );
 }

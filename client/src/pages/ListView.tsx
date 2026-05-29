@@ -4,10 +4,11 @@ import { usePeople } from "../hooks/usePeople";
 import { allRoots, flattenTree, nestPeople } from "../api/nest";
 import { useUIStore } from "../store/ui";
 import { DetailPanel } from "../components/DetailPanel";
+import { TreeSubHeaderSlot } from "../components/TreeSubHeaderSlot";
+import { useMatchNav, useRegisterMatchNav } from "../components/MatchNav";
+import { SearchField } from "../components/SearchField";
 import type { TreeNode } from "../types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import "../styles/views.css";
 
 function genderClass(g?: string | null) {
@@ -35,17 +36,29 @@ type NodeProps = {
   node: TreeNode;
   isOpen: boolean;
   match: Set<string>;
+  currentMatchId: string | null;
   isOpenFor: (id: string) => boolean;
   onSelect: (id: string) => void;
   onToggle: (id: string) => void;
 };
 
-function ListNode({ node, isOpen, match, isOpenFor, onSelect, onToggle }: NodeProps) {
+function ListNode({
+  node,
+  isOpen,
+  match,
+  currentMatchId,
+  isOpenFor,
+  onSelect,
+  onToggle,
+}: NodeProps) {
   const hasKids = node.children.length > 0;
   const cls = ["card", genderClass(node.gender)];
   if (isDeceased(node.deceased)) cls.push("deceased");
   return (
-    <li className={`node${!isOpen && hasKids ? " collapsed" : ""}${match.has(node.id) ? " match" : ""}`}>
+    <li
+      id={`node-${node.id}`}
+      className={`node${!isOpen && hasKids ? " collapsed" : ""}${match.has(node.id) ? " match" : ""}${currentMatchId === node.id ? " current-match" : ""}`}
+    >
       <span className={cls.join(" ")} onClick={() => onSelect(node.id)}>
         <span
           className={`toggle${hasKids ? "" : " empty"}`}
@@ -59,7 +72,6 @@ function ListNode({ node, isOpen, match, isOpenFor, onSelect, onToggle }: NodePr
         </span>
         <span className="name">{node.name}</span>
         {dateRange(node) && <span className="meta">{dateRange(node)}</span>}
-        <span className="id-tag">#{node.id}</span>
       </span>
       {hasKids && (
         <ul>
@@ -69,6 +81,7 @@ function ListNode({ node, isOpen, match, isOpenFor, onSelect, onToggle }: NodePr
               node={c}
               isOpen={isOpenFor(c.id)}
               match={match}
+              currentMatchId={currentMatchId}
               isOpenFor={isOpenFor}
               onSelect={onSelect}
               onToggle={onToggle}
@@ -86,7 +99,6 @@ export function ListView() {
   const tree = useMemo(() => (people ? nestPeople(people) : null), [people]);
   const setSelectedId = useUIStore((s) => s.setSelectedPerson);
   const q = useUIStore((s) => s.searchQuery);
-  const setQ = useUIStore((s) => s.setSearchQuery);
 
   useEffect(() => {
     setSelectedId(null);
@@ -136,6 +148,28 @@ export function ListView() {
     return set;
   }, [q, byId]);
 
+  // Match ids in pre-order traversal (display order) so up/down navigation
+  // goes top-to-bottom through the rendered tree.
+  const matchedIds = useMemo(() => {
+    const out: string[] = [];
+    if (matches.size === 0) return out;
+    const walk = (nodes: TreeNode[]) => {
+      for (const n of nodes) {
+        if (matches.has(n.id)) out.push(n.id);
+        if (n.children?.length) walk(n.children);
+      }
+    };
+    walk(roots);
+    return out;
+  }, [matches, roots]);
+
+  const focusMatch = useCallback((id: string) => {
+    const el = document.getElementById(`node-${id}`);
+    if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, []);
+  useRegisterMatchNav({ matchedIds, focusMatch });
+  const { currentId: currentMatchId } = useMatchNav();
+
   if (loading) return <div className="p-10">Loading…</div>;
   if (error) return <div className="p-10 text-destructive">Error: {error.message}</div>;
   if (Array.isArray(tree) && tree.length === 0) {
@@ -147,35 +181,27 @@ export function ListView() {
     );
   }
 
-  const peopleCount = Object.keys(byId).length;
-
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground">
-      <header className="shrink-0 z-10 flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur">
-        <Button asChild variant="outline" size="sm" className="uppercase tracking-widest">
-          <Link to={`/tree/${treeId}`}>← Views</Link>
-        </Button>
-        <h1 className="m-0 text-lg font-semibold text-primary uppercase tracking-[0.15em]">
-          ◆ Family Tree
-        </h1>
-        <Input
-          type="search"
-          placeholder="Search by name or ID..."
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          className="w-56"
-        />
-        <Button variant="outline" size="sm" onClick={expandAll} className="uppercase tracking-widest">
+    <>
+      <TreeSubHeaderSlot name="actions">
+        <SearchField />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={expandAll}
+          className="uppercase tracking-widest"
+        >
           Expand all
         </Button>
-        <Button variant="outline" size="sm" onClick={collapseAll} className="uppercase tracking-widest">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={collapseAll}
+          className="uppercase tracking-widest"
+        >
           Collapse all
         </Button>
-        <span className="ml-auto text-xs text-muted-foreground tracking-widest">
-          {peopleCount} people · {roots.length} root line{roots.length === 1 ? "" : "s"}
-        </span>
-        <ThemeToggle />
-      </header>
+      </TreeSubHeaderSlot>
 
       <div className="flex-1 min-h-0 p-6 overflow-auto">
         <ul className="tree-list">
@@ -185,6 +211,7 @@ export function ListView() {
               node={r}
               isOpen={isOpenFor(r.id)}
               match={matches}
+              currentMatchId={currentMatchId}
               isOpenFor={isOpenFor}
               onSelect={setSelectedId}
               onToggle={toggleId}
@@ -194,6 +221,6 @@ export function ListView() {
       </div>
 
       <DetailPanel />
-    </div>
+    </>
   );
 }

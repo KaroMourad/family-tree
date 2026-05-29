@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "../api/client";
-import { queryKeys } from "../api/queries";
+import { queryKeys, importTree } from "../api/queries";
 import type { Person, Tree, TreeSummary } from "../types";
 
 // Module-scoped counter for temp IDs (used during optimistic create).
@@ -182,5 +182,22 @@ export function useDeleteTree() {
       toast.error(`Couldn't delete tree: ${(err as Error).message}`);
     },
     onSettled: () => qc.invalidateQueries({ queryKey: queryKeys.trees() }),
+  });
+}
+
+// Import replaces the tree's contents and (server-side) renames the tree.
+// Invalidate both people and tree caches so the editor + name refresh.
+export function useImportTree(treeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (doc: unknown) => importTree(treeId, doc),
+    onError: (err) =>
+      toast.error(`Couldn't import: ${(err as Error).message}`),
+    onSuccess: (res) => toast.success(`Imported ${res.imported} people`),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.treePeople(treeId) });
+      qc.invalidateQueries({ queryKey: queryKeys.tree(treeId), exact: true });
+      qc.invalidateQueries({ queryKey: queryKeys.trees() });
+    },
   });
 }

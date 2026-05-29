@@ -1,6 +1,5 @@
-import { useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { useTreeContext } from "../tree/TreeContext";
 import type { Person } from "../types";
 import { usePeople } from "../hooks/usePeople";
@@ -10,8 +9,9 @@ import {
   useDeletePerson,
   useDeleteTree,
   useRenameTree,
+  useImportTree,
 } from "../hooks/useTreeMutations";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +29,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronDown } from "lucide-react";
+import {
+  ChevronDown,
+  Download,
+  Maximize2,
+  Minimize2,
+  MoreHorizontal,
+  Trash2,
+  Upload,
+  UserPlus,
+} from "lucide-react";
+import { useUIStore } from "../store/ui";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Collapsible,
@@ -46,7 +63,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { DetailPanel } from "@/components/DetailPanel";
+import { TreeSubHeaderSlot } from "@/components/TreeSubHeaderSlot";
+import { useMatchNav, useRegisterMatchNav } from "@/components/MatchNav";
+import { SearchField } from "@/components/SearchField";
+import { toast } from "sonner";
 import "../styles/views.css";
 
 function genderClass(g?: string | null) {
@@ -55,6 +76,18 @@ function genderClass(g?: string | null) {
   if (s.startsWith("m")) return "male";
   if (s.startsWith("f") || s.startsWith("w")) return "female";
   return "";
+}
+
+function countNodes(nodes: Array<{ children?: unknown[] }>): number {
+  return nodes.reduce(
+    (sum, n) =>
+      sum +
+      1 +
+      (Array.isArray(n.children)
+        ? countNodes(n.children as Array<{ children?: unknown[] }>)
+        : 0),
+    0,
+  );
 }
 
 type FormState = Partial<Person> & { name: string };
@@ -96,10 +129,16 @@ function PersonForm({
   const [form, setForm] = useState<FormState>(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const hasMoreInitial =
-    !!(initial.nickname || initial.surnameBirth || initial.surnameNow ||
-       initial.birthYear || initial.deathYear ||
-       initial.partnerName || initial.profession || initial.bio);
+  const hasMoreInitial = !!(
+    initial.nickname ||
+    initial.surnameBirth ||
+    initial.surnameNow ||
+    initial.birthYear ||
+    initial.deathYear ||
+    initial.partnerName ||
+    initial.profession ||
+    initial.bio
+  );
   const [moreOpen, setMoreOpen] = useState(hasMoreInitial);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -120,10 +159,17 @@ function PersonForm({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o && !busy) onCancel(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o && !busy) onCancel();
+      }}
+    >
       <DialogContent className="max-w-xl max-h-[90vh] flex flex-col gap-0 p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
-          <DialogTitle className="uppercase tracking-widest text-primary">{title}</DialogTitle>
+          <DialogTitle className="uppercase tracking-widest text-primary">
+            {title}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-3">
@@ -134,13 +180,24 @@ function PersonForm({
           )}
 
           <div className="space-y-1.5">
-            <Label className="uppercase tracking-widest text-xs text-secondary">Name *</Label>
-            <Input value={form.name} onChange={(e) => update("name", e.target.value)} required />
+            <Label className="uppercase tracking-widest text-xs text-secondary">
+              Name *
+            </Label>
+            <Input
+              value={form.name}
+              onChange={(e) => update("name", e.target.value)}
+              required
+            />
           </div>
 
           <div className="space-y-1.5">
-            <Label className="uppercase tracking-widest text-xs text-secondary">Gender</Label>
-            <Select value={form.gender ?? "_unset"} onValueChange={(v) => update("gender", v === "_unset" ? null : v)}>
+            <Label className="uppercase tracking-widest text-xs text-secondary">
+              Gender
+            </Label>
+            <Select
+              value={form.gender ?? "_unset"}
+              onValueChange={(v) => update("gender", v === "_unset" ? null : v)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="—" />
               </SelectTrigger>
@@ -155,56 +212,105 @@ function PersonForm({
           <Collapsible open={moreOpen} onOpenChange={setMoreOpen}>
             <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-2 text-xs uppercase tracking-widest text-secondary hover:bg-muted/60 transition-colors">
               <span>More details</span>
-              <ChevronDown className={`h-4 w-4 transition-transform ${moreOpen ? "rotate-180" : ""}`} />
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${moreOpen ? "rotate-180" : ""}`}
+              />
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-3 pt-3">
               <div className="space-y-1.5">
-                <Label className="uppercase tracking-widest text-xs text-secondary">Nickname</Label>
-                <Input value={form.nickname ?? ""} onChange={(e) => update("nickname", e.target.value || null)} />
+                <Label className="uppercase tracking-widest text-xs text-secondary">
+                  Nickname
+                </Label>
+                <Input
+                  value={form.nickname ?? ""}
+                  onChange={(e) => update("nickname", e.target.value || null)}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="uppercase tracking-widest text-xs text-secondary">Surname (birth)</Label>
-                  <Input value={form.surnameBirth ?? ""} onChange={(e) => update("surnameBirth", e.target.value || null)} />
+                  <Label className="uppercase tracking-widest text-xs text-secondary">
+                    Surname (birth)
+                  </Label>
+                  <Input
+                    value={form.surnameBirth ?? ""}
+                    onChange={(e) =>
+                      update("surnameBirth", e.target.value || null)
+                    }
+                  />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="uppercase tracking-widest text-xs text-secondary">Surname (now)</Label>
-                  <Input value={form.surnameNow ?? ""} onChange={(e) => update("surnameNow", e.target.value || null)} />
+                  <Label className="uppercase tracking-widest text-xs text-secondary">
+                    Surname (now)
+                  </Label>
+                  <Input
+                    value={form.surnameNow ?? ""}
+                    onChange={(e) =>
+                      update("surnameNow", e.target.value || null)
+                    }
+                  />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="uppercase tracking-widest text-xs text-secondary">Birth year</Label>
+                  <Label className="uppercase tracking-widest text-xs text-secondary">
+                    Birth year
+                  </Label>
                   <Input
                     type="number"
                     value={form.birthYear ?? ""}
-                    onChange={(e) => update("birthYear", e.target.value ? Number(e.target.value) : null)}
+                    onChange={(e) =>
+                      update(
+                        "birthYear",
+                        e.target.value ? Number(e.target.value) : null,
+                      )
+                    }
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="uppercase tracking-widest text-xs text-secondary">Death year</Label>
+                  <Label className="uppercase tracking-widest text-xs text-secondary">
+                    Death year
+                  </Label>
                   <Input
                     type="number"
                     value={form.deathYear ?? ""}
-                    onChange={(e) => update("deathYear", e.target.value ? Number(e.target.value) : null)}
+                    onChange={(e) =>
+                      update(
+                        "deathYear",
+                        e.target.value ? Number(e.target.value) : null,
+                      )
+                    }
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="uppercase tracking-widest text-xs text-secondary">Partner name</Label>
-                <Input value={form.partnerName ?? ""} onChange={(e) => update("partnerName", e.target.value || null)} />
+                <Label className="uppercase tracking-widest text-xs text-secondary">
+                  Partner name
+                </Label>
+                <Input
+                  value={form.partnerName ?? ""}
+                  onChange={(e) =>
+                    update("partnerName", e.target.value || null)
+                  }
+                />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="uppercase tracking-widest text-xs text-secondary">Profession</Label>
-                <Input value={form.profession ?? ""} onChange={(e) => update("profession", e.target.value || null)} />
+                <Label className="uppercase tracking-widest text-xs text-secondary">
+                  Profession
+                </Label>
+                <Input
+                  value={form.profession ?? ""}
+                  onChange={(e) => update("profession", e.target.value || null)}
+                />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="uppercase tracking-widest text-xs text-secondary">Notes / Bio</Label>
+                <Label className="uppercase tracking-widest text-xs text-secondary">
+                  Notes / Bio
+                </Label>
                 <Textarea
                   value={form.bio ?? ""}
                   onChange={(e) => update("bio", e.target.value || null)}
@@ -216,7 +322,9 @@ function PersonForm({
         </div>
 
         <DialogFooter className="px-6 py-4 border-t border-border shrink-0">
-          <Button variant="outline" onClick={onCancel} disabled={busy}>Cancel</Button>
+          <Button variant="outline" onClick={onCancel} disabled={busy}>
+            Cancel
+          </Button>
           <Button onClick={submit} disabled={busy}>
             {busy ? "Saving…" : "Save"}
           </Button>
@@ -226,12 +334,15 @@ function PersonForm({
   );
 }
 
-type EditorState = { mode: "create" | "edit"; person: FormState; id?: string } | null;
+type EditorState = {
+  mode: "create" | "edit";
+  person: FormState;
+  id?: string;
+} | null;
 
 export function Editor() {
   const { treeId } = useParams();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
   const contextTree = useTreeContext();
   const [treeName, setTreeName] = useState(contextTree.name);
   const [renaming, setRenaming] = useState(false);
@@ -244,6 +355,81 @@ export function Editor() {
   const deletePersonMutation = useDeletePerson(treeId!);
   const renameTreeMutation = useRenameTree(treeId!);
   const deleteTreeMutation = useDeleteTree();
+  const q = useUIStore((s) => s.searchQuery);
+  const setSelectedId = useUIStore((s) => s.setSelectedPerson);
+  // Debounce the value the expensive search derivations read from. Typing
+  // updates the input + store immediately (snappy text + ListView sync);
+  // matches / auto-expand / scroll-into-view only fire ~500ms after you stop.
+  const [debouncedQ, setDebouncedQ] = useState(q);
+  useEffect(() => {
+    if (q === debouncedQ) return;
+    const t = setTimeout(() => setDebouncedQ(q), 500);
+    return () => clearTimeout(t);
+  }, [q, debouncedQ]);
+  const importTreeMutation = useImportTree(treeId!);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingImport, setPendingImport] = useState<{
+    doc: unknown;
+    count: number;
+  } | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  async function handleExport() {
+    try {
+      const doc = await (await import("../api/queries")).exportTree(treeId!);
+      const blob = new Blob([JSON.stringify(doc, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${treeName.replace(/[^\w.-]+/g, "_") || "tree"}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error(`Couldn't export: ${(e as Error).message}`);
+    }
+  }
+
+  function onImportFileChosen(e: React.ChangeEvent<HTMLInputElement>) {
+    setImportError(null);
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file later
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      let doc: { formatVersion?: unknown; people?: unknown[] };
+      try {
+        doc = JSON.parse(String(reader.result));
+      } catch {
+        setImportError("That file isn't valid JSON.");
+        toast.error("That file isn't valid JSON.");
+        return;
+      }
+      // Validate the document shape before offering a destructive replace, so
+      // the confirm count is meaningful and matches what the server accepts.
+      if (doc?.formatVersion !== 1 || !Array.isArray(doc.people)) {
+        setImportError(
+          "That file isn't a family-tree export (expected formatVersion 1 with a people array).",
+        );
+        toast.error("That file isn't a family-tree export.");
+        return;
+      }
+      const count = countNodes(doc.people as Array<{ children?: unknown[] }>);
+      setPendingImport({ doc, count });
+    };
+    reader.readAsText(file);
+  }
+
+  async function confirmImport() {
+    if (!pendingImport) return;
+    try {
+      await importTreeMutation.mutateAsync(pendingImport.doc);
+      setPendingImport(null);
+    } catch {
+      // toast handled in hook; keep dialog open so the user can retry/cancel
+    }
+  }
   const [editorState, setEditorState] = useState<EditorState>(null);
   // Open-state model: same semantics as ListView. openIds holds nodes whose
   // visible state has been explicitly toggled away from `defaultOpen`.
@@ -302,20 +488,79 @@ export function Editor() {
     setRenaming(false);
   }
 
-  const { roots, byParent } = useMemo(() => {
+  const { roots, byParent, parentOf } = useMemo(() => {
     const byParent = new Map<string | null, Person[]>();
+    const parentOf = new Map<string, string | null>();
     for (const p of people) {
       const list = byParent.get(p.parentId) ?? [];
       list.push(p);
       byParent.set(p.parentId, list);
+      parentOf.set(p.id, p.parentId);
     }
-    return { roots: byParent.get(null) ?? [], byParent };
+    return { roots: byParent.get(null) ?? [], byParent, parentOf };
   }, [people]);
+
+  // Substring match across name, nickname, id, and surnames — same rule as ListView.
+  // Reads debouncedQ so this and the downstream auto-expand/scroll-into-view
+  // only refire when typing pauses, not on every keystroke.
+  const matches = useMemo(() => {
+    const set = new Set<string>();
+    const term = debouncedQ.trim().toLowerCase();
+    if (!term) return set;
+    for (const p of people) {
+      const hay = `${p.name} ${p.nickname ?? ""} ${p.id} ${p.surnameNow ?? ""} ${p.surnameBirth ?? ""}`.toLowerCase();
+      if (hay.includes(term)) set.add(p.id);
+    }
+    return set;
+  }, [debouncedQ, people]);
+
+  // While a query is active, force every ancestor of every match open so the
+  // matching nodes are visible (they may otherwise be inside collapsed branches).
+  const ancestorsOfMatches = useMemo(() => {
+    const set = new Set<string>();
+    if (matches.size === 0) return set;
+    for (const id of matches) {
+      let p = parentOf.get(id) ?? null;
+      while (p && !set.has(p)) {
+        set.add(p);
+        p = parentOf.get(p) ?? null;
+      }
+    }
+    return set;
+  }, [matches, parentOf]);
+
+  // Match ids in DOM order (pre-order traversal), so up/down navigation
+  // visits matches top-to-bottom as they appear in the tree.
+  const matchedIds = useMemo(() => {
+    const out: string[] = [];
+    if (matches.size === 0) return out;
+    const walk = (list: Person[]) => {
+      for (const p of list) {
+        if (matches.has(p.id)) out.push(p.id);
+        const kids = byParent.get(p.id);
+        if (kids) walk(kids);
+      }
+    };
+    walk(roots);
+    return out;
+  }, [matches, byParent, roots]);
+
+  // Scroll the matched <li> (id=`node-${id}`) into view. Stable identity so
+  // useRegisterMatchNav doesn't re-register every render.
+  const focusMatch = useCallback((id: string) => {
+    const el = document.getElementById(`node-${id}`);
+    if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, []);
+  useRegisterMatchNav({ matchedIds, focusMatch });
+  const { currentId: currentMatchId } = useMatchNav();
 
   async function handleSave(data: FormState) {
     const { id: _omit, ...rest } = data as Record<string, unknown> as any;
     if (editorState?.mode === "edit") {
-      await updatePersonMutation.mutateAsync({ id: editorState.id!, patch: rest });
+      await updatePersonMutation.mutateAsync({
+        id: editorState.id!,
+        patch: rest,
+      });
     } else {
       await createPersonMutation.mutateAsync(rest);
     }
@@ -352,34 +597,70 @@ export function Editor() {
     setDefaultOpen(false);
     setOpenIds(new Set());
   }
-  const isNodeOpen = (id: string) => (openIds.has(id) ? !defaultOpen : defaultOpen);
+  const isNodeOpen = (id: string) => {
+    // While searching, ancestors of matches are forced open so matches are
+    // visible. Clearing the query restores the user's previous toggle state
+    // verbatim because we don't mutate openIds/defaultOpen here.
+    if (ancestorsOfMatches.has(id)) return true;
+    return openIds.has(id) ? !defaultOpen : defaultOpen;
+  };
+
+  function countDescendants(id: string): number {
+    const kids = byParent.get(id) ?? [];
+    return kids.reduce((sum, c) => sum + 1 + countDescendants(c.id), 0);
+  }
 
   function renderNode(p: Person, depth: number): JSX.Element {
     const kids = byParent.get(p.id) ?? [];
     const isOpen = isNodeOpen(p.id);
     const cls = ["card", genderClass(p.gender)];
     return (
-      <li key={p.id} className={`node${!isOpen && kids.length > 0 ? " collapsed" : ""}`}>
-        <span className={cls.join(" ")}>
+      <li
+        key={p.id}
+        id={`node-${p.id}`}
+        className={`node${!isOpen && kids.length > 0 ? " collapsed" : ""}${matches.has(p.id) ? " match" : ""}${currentMatchId === p.id ? " current-match" : ""}`}
+      >
+        <span
+          className={`${cls.join(" ")} cursor-pointer`}
+          role="button"
+          tabIndex={0}
+          onClick={() => setSelectedId(p.id)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setSelectedId(p.id);
+            }
+          }}
+        >
           <span
             className={`toggle${kids.length === 0 ? " empty" : ""}`}
-            onClick={() => kids.length > 0 && toggleNode(p.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (kids.length > 0) toggleNode(p.id);
+            }}
           >
             {kids.length === 0 ? "·" : isOpen ? "−" : "+"}
           </span>
           <span className="name">{p.name}</span>
           {(p.birthYear || p.deathYear) && (
             <span className="meta">
-              ({p.birthYear ?? ""}{p.birthYear || p.deathYear ? " – " : ""}{p.deathYear ?? ""})
+              ({p.birthYear ?? ""}
+              {p.birthYear || p.deathYear ? " – " : ""}
+              {p.deathYear ?? ""})
             </span>
           )}
-          <span className="id-tag">#{p.id}</span>
+          {kids.length > 0 && (
+            <span className="children-count">{countDescendants(p.id)}</span>
+          )}
           <span className="inline-flex items-center gap-1 ml-2">
             <Button
               size="sm"
               variant="ghost"
               className="h-6 px-2 text-[10px] text-primary uppercase tracking-widest hover:bg-primary/15"
-              onClick={() => setEditorState({ mode: "create", person: emptyForm(p.id) })}
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditorState({ mode: "create", person: emptyForm(p.id) });
+              }}
               title="Add child"
             >
               + Child
@@ -388,7 +669,14 @@ export function Editor() {
               size="sm"
               variant="ghost"
               className="h-6 px-2 text-[10px] uppercase tracking-widest"
-              onClick={() => setEditorState({ mode: "edit", person: { ...(p as any), name: p.name }, id: p.id })}
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditorState({
+                  mode: "edit",
+                  person: { ...(p as any), name: p.name },
+                  id: p.id,
+                });
+              }}
             >
               Edit
             </Button>
@@ -396,7 +684,11 @@ export function Editor() {
               size="sm"
               variant="ghost"
               className="h-6 px-2 text-[10px] text-destructive uppercase tracking-widest hover:bg-destructive/15"
-              onClick={() => { setDeleteTarget(p); setDeleteError(null); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteTarget(p);
+                setDeleteError(null);
+              }}
             >
               Delete
             </Button>
@@ -410,88 +702,185 @@ export function Editor() {
   }
 
   if (loading) return <div className="p-10">Loading…</div>;
-  if (error) return <div className="p-10 text-destructive">Error: {error.message}</div>;
+  if (error)
+    return <div className="p-10 text-destructive">Error: {error.message}</div>;
 
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground">
-      <header className="shrink-0 z-10 flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-background/90 backdrop-blur">
-          <Button asChild variant="outline" size="sm" className="uppercase tracking-widest">
-            <Link to={`/tree/${treeId}`}>← Views</Link>
-          </Button>
-          {renaming ? (
-            <span className="inline-flex items-center gap-2">
-              <Input
-                autoFocus
-                value={renameDraft}
-                onChange={(e) => setRenameDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") saveTreeName();
-                  else if (e.key === "Escape") cancelRename();
-                }}
-                disabled={renameBusy}
-                className="text-lg w-64"
-              />
-              <Button size="sm" onClick={saveTreeName} disabled={renameBusy}>
-                {renameBusy ? "Saving…" : "Save"}
-              </Button>
-              <Button size="sm" variant="outline" onClick={cancelRename} disabled={renameBusy}>
-                Cancel
-              </Button>
-              {renameError && <span className="text-destructive text-xs">{renameError}</span>}
-            </span>
-          ) : (
-            <h1
-              onClick={() => {
-                setRenameDraft(treeName);
-                setRenameError(null);
-                setRenaming(true);
+    <>
+      <TreeSubHeaderSlot name="title">
+        {renaming ? (
+          <span className="inline-flex items-center gap-2">
+            <Input
+              autoFocus
+              value={renameDraft}
+              onChange={(e) => setRenameDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") saveTreeName();
+                else if (e.key === "Escape") cancelRename();
               }}
-              className="m-0 text-lg font-semibold text-primary uppercase tracking-[0.15em] cursor-pointer"
-              title="Click to rename"
+              disabled={renameBusy}
+              className="text-lg w-64"
+            />
+            <Button size="sm" onClick={saveTreeName} disabled={renameBusy}>
+              {renameBusy ? "Saving…" : "Save"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={cancelRename}
+              disabled={renameBusy}
             >
-              ◆ {treeName} ✎
-            </h1>
-          )}
-          <Button size="sm" onClick={() => setEditorState({ mode: "create", person: emptyForm(null) })} className="uppercase tracking-widest">
-            + Root person
-          </Button>
-          <Button variant="outline" size="sm" onClick={expandAll} className="uppercase tracking-widest">
-            Expand all
-          </Button>
-          <Button variant="outline" size="sm" onClick={collapseAll} className="uppercase tracking-widest">
-            Collapse all
-          </Button>
-          <span className="ml-auto text-xs text-muted-foreground tracking-widest">
-            {people.length} people · {user?.email} ({user?.role})
+              Cancel
+            </Button>
+            {renameError && (
+              <span className="text-destructive text-xs">{renameError}</span>
+            )}
           </span>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => { setDeleteTreeOpen(true); setDeleteTreeName(""); setDeleteTreeError(null); }}
-            className="uppercase tracking-widest text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+        ) : (
+          <h1
+            onClick={() => {
+              setRenameDraft(treeName);
+              setRenameError(null);
+              setRenaming(true);
+            }}
+            className="m-0 text-lg font-semibold text-primary uppercase tracking-[0.15em] cursor-pointer truncate min-w-0"
+            title="Click to rename"
           >
-            Delete tree
-          </Button>
-          <Button size="sm" variant="outline" onClick={logout}>Logout</Button>
-          <ThemeToggle />
-        </header>
+            ◆ {treeName} ✎
+          </h1>
+        )}
+      </TreeSubHeaderSlot>
+      <TreeSubHeaderSlot name="actions">
+        <SearchField />
+        {/* ⋯ actions menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label="More actions"
+            className={buttonVariants({
+              variant: "outline",
+              size: "icon-sm",
+            })}
+          >
+            <MoreHorizontal />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                setEditorState({ mode: "create", person: emptyForm(null) });
+              }}
+            >
+              <UserPlus /> Add root person
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                expandAll();
+              }}
+            >
+              <Maximize2 /> Expand all
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                collapseAll();
+              }}
+            >
+              <Minimize2 /> Collapse all
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                handleExport();
+              }}
+            >
+              <Download /> Export JSON
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                fileInputRef.current?.click();
+              }}
+            >
+              <Upload /> Import JSON
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onSelect={(e) => {
+                e.preventDefault();
+                setDeleteTreeOpen(true);
+                setDeleteTreeName("");
+                setDeleteTreeError(null);
+              }}
+            >
+              <Trash2 /> Delete tree
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={onImportFileChosen}
+        />
+      </TreeSubHeaderSlot>
 
-        <div className="flex-1 min-h-0 p-6 overflow-auto">
-          <ul className="tree-list">{roots.map((r) => renderNode(r, 0))}</ul>
-        </div>
+      <div className="flex-1 min-h-0 p-6 overflow-auto">
+        <ul className="tree-list">{roots.map((r) => renderNode(r, 0))}</ul>
+      </div>
+
+      <DetailPanel
+        actions={{
+          onEdit: (node) => {
+            const person = people.find((x) => x.id === node.id);
+            if (!person) return;
+            setEditorState({
+              mode: "edit",
+              person: { ...(person as any), name: person.name },
+              id: person.id,
+            });
+          },
+          onAddChild: (node) => {
+            setEditorState({ mode: "create", person: emptyForm(node.id) });
+          },
+          onDelete: (node) => {
+            const person = people.find((x) => x.id === node.id);
+            if (!person) return;
+            setDeleteTarget(person);
+            setDeleteError(null);
+          },
+        }}
+      />
 
       <PersonForm
-        key={editorState ? `${editorState.mode}-${editorState.id ?? "new"}` : "closed"}
+        key={
+          editorState
+            ? `${editorState.mode}-${editorState.id ?? "new"}`
+            : "closed"
+        }
         open={!!editorState}
         initial={editorState?.person ?? emptyForm(null)}
-        title={editorState?.mode === "create" ? "Add person" : `Edit ${editorState?.person.name ?? ""}`}
+        title={
+          editorState?.mode === "create"
+            ? "Add person"
+            : `Edit ${editorState?.person.name ?? ""}`
+        }
         onCancel={() => setEditorState(null)}
         onSave={handleSave}
       />
 
       <AlertDialog
         open={!!deleteTarget}
-        onOpenChange={(o) => { if (!o && !deleteBusy) { setDeleteTarget(null); setDeleteError(null); } }}
+        onOpenChange={(o) => {
+          if (!o && !deleteBusy) {
+            setDeleteTarget(null);
+            setDeleteError(null);
+          }
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -499,12 +888,13 @@ export function Editor() {
               Delete {deleteTarget?.name}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteTarget && (() => {
-                const kids = byParent.get(deleteTarget.id) ?? [];
-                return kids.length > 0
-                  ? `Their ${kids.length} direct child${kids.length === 1 ? "" : "ren"} will become roots. This cannot be undone.`
-                  : "This cannot be undone.";
-              })()}
+              {deleteTarget &&
+                (() => {
+                  const kids = byParent.get(deleteTarget.id) ?? [];
+                  return kids.length > 0
+                    ? `Their ${kids.length} direct child${kids.length === 1 ? "" : "ren"} will become roots. This cannot be undone.`
+                    : "This cannot be undone.";
+                })()}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError && (
@@ -515,7 +905,10 @@ export function Editor() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteBusy}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={(e) => { e.preventDefault(); confirmDelete(); }}
+              onClick={(e) => {
+                e.preventDefault();
+                confirmDelete();
+              }}
               disabled={deleteBusy}
               className="bg-destructive text-white hover:bg-destructive/90"
             >
@@ -543,7 +936,8 @@ export function Editor() {
           </DialogHeader>
           <div className="space-y-3 text-sm">
             <p>
-              This deletes the tree and all {people.length} people in it. There is no undo.
+              This deletes the tree and all {people.length} people in it. There
+              is no undo.
             </p>
             <p>Type the tree name to confirm:</p>
             <Input
@@ -575,6 +969,49 @@ export function Editor() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+
+      <AlertDialog
+        open={!!pendingImport}
+        onOpenChange={(o) => {
+          if (!o && !importTreeMutation.isPending) {
+            setPendingImport(null);
+            setImportError(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="uppercase tracking-widest text-destructive">
+              Replace this tree?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will replace all {people.length} people in "{treeName}" with{" "}
+              {pendingImport?.count ?? 0} people from the file. This cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {importError && (
+            <Alert variant="destructive">
+              <AlertDescription>{importError}</AlertDescription>
+            </Alert>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={importTreeMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                confirmImport();
+              }}
+              disabled={importTreeMutation.isPending}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {importTreeMutation.isPending ? "Importing…" : "Replace"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

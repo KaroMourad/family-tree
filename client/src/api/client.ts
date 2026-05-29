@@ -16,7 +16,8 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const res = await fetch(`/api${path}`, { ...init, headers });
+  const apiBase = import.meta.env.VITE_API_URL ?? "";
+  const res = await fetch(`${apiBase}/api${path}`, { ...init, headers });
   if (!res.ok) {
     let message = `HTTP ${res.status}`;
     try {

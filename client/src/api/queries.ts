@@ -18,3 +18,18 @@ export function fetchTree(treeId: string): Promise<Tree> {
 export function fetchPeople(treeId: string): Promise<Person[]> {
   return api<Person[]>(`/trees/${treeId}/people`);
 }
+
+// Export returns the raw document (used to trigger a file download).
+export function exportTree(treeId: string): Promise<unknown> {
+  return api<unknown>(`/trees/${treeId}/export`);
+}
+
+export function importTree(
+  treeId: string,
+  doc: unknown,
+): Promise<{ imported: number; name: string }> {
+  return api(`/trees/${treeId}/import`, {
+    method: "POST",
+    body: JSON.stringify(doc),
+  });
+}

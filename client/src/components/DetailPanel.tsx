@@ -11,6 +11,19 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Pencil, Trash2, UserPlus } from "lucide-react";
+
+export type DetailPanelActions = {
+  onEdit: (person: TreeNode) => void;
+  onAddChild: (person: TreeNode) => void;
+  onDelete: (person: TreeNode) => void;
+};
+
+type Props = {
+  /** When provided, render an action footer (Add child, Edit, Delete). Read-only views omit this. */
+  actions?: DetailPanelActions;
+};
 
 function Row({ label, value }: { label: string; value: unknown }) {
   if (value == null || value === "") return null;
@@ -22,7 +35,7 @@ function Row({ label, value }: { label: string; value: unknown }) {
   );
 }
 
-export function DetailPanel() {
+export function DetailPanel({ actions }: Props = {}) {
   const { treeId } = useParams();
   const { data: people } = usePeople(treeId);
   const selectedId = useUIStore((s) => s.selectedPersonId);
@@ -90,6 +103,37 @@ export function DetailPanel() {
               <Row label="Profession" value={person.profession} />
               <Row label="Notes" value={person.bio} />
             </dl>
+            {actions && (
+              <>
+                <Separator />
+                <div className="p-4 flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => actions.onAddChild(person)}
+                    className="uppercase tracking-widest"
+                  >
+                    <UserPlus /> Add child
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => actions.onEdit(person)}
+                    className="uppercase tracking-widest"
+                  >
+                    <Pencil /> Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => actions.onDelete(person)}
+                    className="ml-auto uppercase tracking-widest text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2 /> Delete
+                  </Button>
+                </div>
+              </>
+            )}
           </>
         )}
       </SheetContent>
