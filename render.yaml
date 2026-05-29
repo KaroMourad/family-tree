@@ -6,9 +6,11 @@
 # pnpm install --frozen-lockfile can see the lockfile. We then --filter into
 # the right workspace for the actual build.
 #
-# We do not run `corepack enable` because Render's build image has corepack
-# pre-installed system-wide in a read-only path; `enable` errors with EROFS.
-# pnpm is resolved via the root package.json's "packageManager" field.
+# pnpm install: we install a fresh copy of corepack via npm (writes to a
+# user-owned npm global, not the read-only /usr/bin), then have it activate
+# pnpm 11.3.0. The system-bundled corepack on Render's image lives in /usr/bin
+# and errors with EROFS when `corepack enable` tries to rewrite its symlinks.
+# Node version is pinned via .node-version at the repo root (20.18.0).
 version: "1"
 services:
   - type: web
@@ -17,7 +19,7 @@ services:
     plan: free
     region: frankfurt
     autoDeployTrigger: commit
-    buildCommand: npm install -g pnpm@11.3.0 && pnpm install --frozen-lockfile && pnpm --filter @family-tree/server prisma:generate && pnpm --filter @family-tree/server build
+    buildCommand: npm install --global corepack@latest && corepack enable && corepack prepare pnpm@11.3.0 --activate && pnpm install --frozen-lockfile && pnpm --filter @family-tree/server prisma:generate && pnpm --filter @family-tree/server build
     startCommand: pnpm --filter @family-tree/server prisma:deploy && pnpm --filter @family-tree/server start
     healthCheckPath: /api/health
     envVars:
@@ -34,7 +36,7 @@ services:
     name: family-tree-web
     runtime: static
     autoDeployTrigger: commit
-    buildCommand: npm install -g pnpm@11.3.0 && pnpm install --frozen-lockfile && pnpm --filter @family-tree/client build
+    buildCommand: npm install --global corepack@latest && corepack enable && corepack prepare pnpm@11.3.0 --activate && pnpm install --frozen-lockfile && pnpm --filter @family-tree/client build
     staticPublishPath: client/dist
     envVars:
       - key: VITE_API_URL
