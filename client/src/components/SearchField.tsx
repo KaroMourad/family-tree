@@ -1,4 +1,5 @@
 import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUIStore } from "../store/ui";
 import { useMatchNav } from "./MatchNav";
@@ -40,32 +41,38 @@ export function SearchField({ className }: { className?: string }) {
           <span className="px-1 text-[10px] tabular-nums text-muted-foreground tracking-widest">
             {total === 0 ? "no match" : `${currentIndex + 1} / ${total}`}
           </span>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
             aria-label="Previous match"
             onClick={goPrev}
             disabled={total === 0}
-            className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+            className="text-muted-foreground"
           >
-            <ChevronUp className="h-3.5 w-3.5" />
-          </button>
-          <button
+            <ChevronUp />
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
             aria-label="Next match"
             onClick={goNext}
             disabled={total === 0}
-            className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+            className="text-muted-foreground"
           >
-            <ChevronDown className="h-3.5 w-3.5" />
-          </button>
-          <button
+            <ChevronDown />
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
             aria-label="Clear search"
             onClick={() => setQ("")}
-            className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            className="text-muted-foreground"
           >
-            <X className="h-3.5 w-3.5" />
-          </button>
+            <X />
+          </Button>
         </div>
       )}
     </div>
