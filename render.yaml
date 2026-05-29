@@ -10,7 +10,8 @@
 # user-owned npm global, not the read-only /usr/bin), then have it activate
 # pnpm 11.3.0. The system-bundled corepack on Render's image lives in /usr/bin
 # and errors with EROFS when `corepack enable` tries to rewrite its symlinks.
-# Node version is pinned via .node-version at the repo root (20.18.0).
+# Node version is pinned via .node-version at the repo root (22.13.0).
+# pnpm 11.x requires Node >= 22.13 (uses the node:sqlite builtin added in 22.5).
 version: "1"
 services:
   - type: web
