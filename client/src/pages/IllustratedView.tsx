@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import * as d3 from "d3";
 import { usePeople } from "../hooks/usePeople";
@@ -112,8 +112,36 @@ export function IllustratedView() {
     walk(root);
     return out;
   }, [q, root]);
-  // Phase A: register matched ids; SVG pan/zoom focus comes in Phase B.
-  useRegisterMatchNav({ matchedIds });
+  // Pan/zoom the SVG to center the matched name-tag. Looks up the rendered
+  // element by data-id, reads layout coordinates from its datum tuple
+  // ([id, Pos] with lower-case x/y), and applies a centering transform.
+  const focusMatch = useCallback((id: string) => {
+    const svgEl = svgRef.current;
+    const gEl = gRef.current;
+    const zoom = zoomRef.current;
+    if (!svgEl || !gEl || !zoom) return;
+    const nodeEl = gEl.querySelector<SVGGElement>(
+      `g.name-tag[data-id="${CSS.escape(id)}"]`,
+    );
+    if (!nodeEl) return;
+    const datum = d3.select(nodeEl).datum() as [string, Pos] | undefined;
+    const p = datum?.[1];
+    if (!p) return;
+    const w = svgEl.clientWidth;
+    const h = svgEl.clientHeight;
+    const cur = d3.zoomTransform(svgEl);
+    const scale = Math.max(cur.k, 1.2);
+    d3.select(svgEl)
+      .transition()
+      .duration(500)
+      .call(
+        zoom.transform,
+        d3.zoomIdentity
+          .translate(w / 2 - scale * p.x, h / 2 - scale * p.y)
+          .scale(scale),
+      );
+  }, []);
+  useRegisterMatchNav({ matchedIds, focusMatch });
 
   useEffect(() => {
     setSelectedId(null);
@@ -213,20 +241,15 @@ export function IllustratedView() {
     svg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
   }, [root, layout, byId]);
 
+  // Drive .match class on g.name-tag from the canonical matchedIds set so
+  // the highlighted tags match the counter exactly.
   useEffect(() => {
     if (!gRef.current) return;
-    const term = q.trim().toLowerCase();
-    d3.select(gRef.current).selectAll<SVGGElement, [string, Pos]>("g.name-tag").classed("match", false);
-    if (!term) return;
+    const matchSet = new Set(matchedIds);
     d3.select(gRef.current)
       .selectAll<SVGGElement, [string, Pos]>("g.name-tag")
-      .each(function ([id]) {
-        const p = byId[id];
-        if (!p) return;
-        const hay = `${p.name} ${id}`.toLowerCase();
-        if (hay.includes(term)) d3.select(this).classed("match", true);
-      });
-  }, [q, byId]);
+      .classed("match", ([id]) => matchSet.has(id));
+  }, [matchedIds]);
 
   function fit() {
     if (!gRef.current || !svgRef.current || !zoomRef.current) return;

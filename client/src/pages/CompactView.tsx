@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import * as d3 from "d3";
 import { usePeople } from "../hooks/usePeople";
@@ -61,8 +61,35 @@ export function CompactView() {
     walk(root);
     return out;
   }, [q, root]);
-  // Phase A: register matched ids; SVG pan/zoom focus comes in Phase B.
-  useRegisterMatchNav({ matchedIds });
+  // Pan/zoom the SVG to center the matched name-tag. Looks up the rendered
+  // element by data-id, reads layout coordinates from its datum (.X / .Y),
+  // and applies a centering transform. Bails silently if not in the DOM yet.
+  const focusMatch = useCallback((id: string) => {
+    const svgEl = svgRef.current;
+    const gEl = gRef.current;
+    const zoom = zoomRef.current;
+    if (!svgEl || !gEl || !zoom) return;
+    const nodeEl = gEl.querySelector<SVGGElement>(
+      `g.name-tag[data-id="${CSS.escape(id)}"]`,
+    );
+    if (!nodeEl) return;
+    const datum = d3.select(nodeEl).datum() as { X?: number; Y?: number };
+    if (typeof datum?.X !== "number" || typeof datum?.Y !== "number") return;
+    const w = svgEl.clientWidth;
+    const h = svgEl.clientHeight;
+    const cur = d3.zoomTransform(svgEl);
+    const scale = Math.max(cur.k, 1.2);
+    d3.select(svgEl)
+      .transition()
+      .duration(500)
+      .call(
+        zoom.transform,
+        d3.zoomIdentity
+          .translate(w / 2 - scale * datum.X, h / 2 - scale * datum.Y)
+          .scale(scale),
+      );
+  }, []);
+  useRegisterMatchNav({ matchedIds, focusMatch });
 
   useEffect(() => {
     setSelectedId(null);
@@ -219,33 +246,16 @@ export function CompactView() {
     svg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
   }, [root]);
 
-  // search
+  // Drive .match class on g.name-tag from the canonical matchedIds set so the
+  // highlighted tags match the counter exactly. Pan-to-current-match is
+  // handled by MatchNav via focusMatch.
   useEffect(() => {
     if (!gRef.current) return;
-    const term = q.trim().toLowerCase();
-    d3.select(gRef.current).selectAll<SVGGElement, d3.HierarchyNode<TreeNode>>("g.name-tag").classed("match", false);
-    if (!term) return;
-    let first: { x: number; y: number } | null = null;
+    const matchSet = new Set(matchedIds);
     d3.select(gRef.current)
       .selectAll<SVGGElement, d3.HierarchyNode<TreeNode>>("g.name-tag")
-      .each(function (d: any) {
-        const hay = (d.data.name + " " + d.data.id).toLowerCase();
-        if (hay.includes(term)) {
-          d3.select(this).classed("match", true);
-          if (!first) first = { x: d.X, y: d.Y };
-        }
-      });
-    if (first && svgRef.current && zoomRef.current) {
-      const f = first as { x: number; y: number };
-      const w = svgRef.current.clientWidth, h = svgRef.current.clientHeight;
-      const cur = d3.zoomTransform(svgRef.current);
-      const scale = Math.max(cur.k, 1.2);
-      d3.select(svgRef.current).transition().duration(500).call(
-        zoomRef.current.transform,
-        d3.zoomIdentity.translate(w / 2 - scale * f.x, h / 2 - scale * f.y).scale(scale),
-      );
-    }
-  }, [q]);
+      .classed("match", (d) => matchSet.has(d.data.id));
+  }, [matchedIds]);
 
   function fit() {
     if (!gRef.current || !svgRef.current || !zoomRef.current) return;
