@@ -1,14 +1,22 @@
 # Render blueprint: static SPA + Express API.
 # Database: Neon Postgres (created separately; its connection string is set as
 # the DATABASE_URL env var on the web service via the Render dashboard).
+#
+# Both services build from the repo root (where pnpm-lock.yaml lives) so
+# pnpm install --frozen-lockfile can see the lockfile. We then --filter into
+# the right workspace for the actual build.
+#
+# We do not run `corepack enable` because Render's build image has corepack
+# pre-installed system-wide in a read-only path; `enable` errors with EROFS.
+# pnpm is resolved via the root package.json's "packageManager" field.
 services:
   - type: web
     name: family-tree-api
     runtime: node
     plan: free
-    rootDir: server
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm prisma:generate && pnpm build
-    startCommand: pnpm prisma:deploy && pnpm start
+    region: frankfurt
+    buildCommand: npm install -g pnpm@11.3.0 && pnpm install --frozen-lockfile && pnpm --filter @family-tree/server prisma:generate && pnpm --filter @family-tree/server build
+    startCommand: pnpm --filter @family-tree/server prisma:deploy && pnpm --filter @family-tree/server start
     healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
@@ -23,9 +31,9 @@ services:
   - type: web
     name: family-tree-web
     runtime: static
-    rootDir: client
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
-    staticPublishPath: dist
+    region: frankfurt
+    buildCommand: npm install -g pnpm@11.3.0 && pnpm install --frozen-lockfile && pnpm --filter @family-tree/client build
+    staticPublishPath: client/dist
     envVars:
       - key: VITE_API_URL
         sync: false        # set to the family-tree-api URL once known
